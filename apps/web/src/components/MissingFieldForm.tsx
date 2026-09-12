@@ -1,5 +1,5 @@
 import { Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ClaimCase, ClaimFieldName, ReviewCaseInput } from '@claimflow/domain';
 
 export function MissingFieldForm({
@@ -25,6 +25,10 @@ export function MissingFieldForm({
   const [name, setName] = useState<ClaimFieldName | ''>('');
   const [value, setValue] = useState('');
   const [documentId, setDocumentId] = useState(claim.documents[0]?.id ?? '');
+  useEffect(() => {
+    if (!claim.documents.some((document) => document.id === documentId))
+      setDocumentId(claim.documents[0]?.id ?? '');
+  }, [claim.documents, documentId]);
   const [page, setPage] = useState(1);
   const [excerpt, setExcerpt] = useState('');
   const field = missing.includes(name as ClaimFieldName) ? (name as ClaimFieldName) : missing[0];

@@ -37,7 +37,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
         <Stack spacing={2.5} divider={<Divider flexItem />}>
           {fields.map((field) => {
             const percent = Math.round(field.confidence * 100);
-            const correction = corrections[field.name] ?? field.displayValue;
+            const correction = corrections[field.id] ?? field.displayValue;
             return (
               <Box key={field.id}>
                 <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between' }}>
@@ -91,7 +91,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                       onChange={(event) =>
                         setCorrections((current) => ({
                           ...current,
-                          [field.name]: event.target.value,
+                          [field.id]: event.target.value,
                         }))
                       }
                       fullWidth
