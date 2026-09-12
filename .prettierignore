@@ -1,0 +1,5 @@
+docs/**/*.md
+.github/ISSUE_TEMPLATE/**/*.md
+node_modules/
+dist/
+coverage/
