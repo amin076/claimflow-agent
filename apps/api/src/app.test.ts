@@ -21,6 +21,10 @@ describe('API', () => {
     apps.push(app);
     const response = await app.inject({ method: 'GET', url: '/api/cases/demo' });
     expect(response.statusCode).toBe(200);
-    expect(response.json().status).toBe('DRAFT');
+    const claim = response.json();
+    expect(claim.status).toBe('NEEDS_REVIEW');
+    expect(claim.documents).toHaveLength(2);
+    expect(claim.fields).toHaveLength(3);
+    expect(claim.issues).toHaveLength(2);
   });
 });

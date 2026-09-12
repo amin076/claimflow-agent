@@ -1,0 +1,9 @@
+{
+  "fixtureVersion": 1,
+  "caseId": "synthetic-review-001",
+  "description": "Blurred handwriting and conflicting vehicle registration",
+  "expectedStatus": "NEEDS_REVIEW",
+  "expectedDocumentTypes": ["CLAIM_FORM", "INVOICE"],
+  "expectedIssues": ["LOW_CONFIDENCE", "CONTRADICTION"],
+  "synthetic": true
+}
