@@ -1,0 +1,9 @@
+{
+  "fixtureVersion": 1,
+  "caseId": "synthetic-complete-001",
+  "description": "Clear and complete motor claim",
+  "expectedStatus": "READY",
+  "expectedDocumentTypes": ["EMAIL", "CLAIM_FORM", "DAMAGE_PHOTO"],
+  "expectedIssues": [],
+  "synthetic": true
+}

@@ -1,0 +1,9 @@
+{
+  "fixtureVersion": 1,
+  "caseId": "synthetic-input-001",
+  "description": "Claim form missing the incident address",
+  "expectedStatus": "NEEDS_INPUT",
+  "expectedDocumentTypes": ["CLAIM_FORM"],
+  "expectedIssues": ["MISSING_REQUIRED_FIELD"],
+  "synthetic": true
+}
