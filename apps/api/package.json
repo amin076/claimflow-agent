@@ -13,6 +13,7 @@
     "@claimflow/config": "*",
     "@claimflow/domain": "*",
     "@fastify/cors": "11.3.0",
-    "fastify": "5.12.4"
+    "fastify": "5.12.4",
+    "zod": "4.6.2"
   }
 }

@@ -134,7 +134,9 @@ This project is intended for the **Forward: AI in Business Hackathon**:
 
 **Active hackathon build.** Phases 1 and 2 provide the TypeScript workspace, React
 interface, Fastify API, evidence-linked domain model, synthetic fixtures, tests,
-and CI. Cloud persistence and deployment are the next milestones.
+and CI. The Phase 3 local Backend API supports the case, document, deterministic
+processing, review, and audit workflow. Frontend integration, Cloud persistence,
+and deployment are the next milestones.
 
 ## MVP acceptance criteria
 
@@ -280,6 +282,7 @@ boundaries, see the [Local Development Guide](docs/local-development.md) or its
 │   ├── judging-strategy.md
 │   ├── local-development.md
 │   ├── local-development.fa.md
+│   ├── local-api.md
 │   ├── problem-statement.md
 │   ├── product-vision.md
 │   ├── roadmap.md
