@@ -47,3 +47,8 @@ Every contributor must complete the
 [Local Development Guide](local-development.md), run both applications, verify
 the health and demo-case endpoints, and pass the local quality checks before
 starting an implementation issue.
+
+Behzad should then follow the dedicated
+[Frontend Onboarding and Work Plan](behzad-frontend-work-plan.md), beginning
+with the Frontend foundation Pull Request before moving to later Phase 3
+screens.

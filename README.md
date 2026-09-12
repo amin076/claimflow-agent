@@ -273,6 +273,7 @@ boundaries, see the [Local Development Guide](docs/local-development.md) or its
 ├── docs/
 │   ├── architecture.md
 │   ├── agent-architecture.md
+│   ├── behzad-frontend-work-plan.md
 │   ├── data-model.md
 │   ├── demo-scenario.md
 │   ├── human-review-policy.md
