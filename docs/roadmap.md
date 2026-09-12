@@ -134,6 +134,11 @@ Every extracted field should be able to hold a value, confidence, evidence locat
 
 ### Phase 3 — Local mock vertical slice
 
+**Status: complete.** The local in-memory API and responsive React workspace now
+cover case creation, synthetic document metadata, deterministic processing,
+evidence-linked fields, validation issues, human review, case listing, and the
+audit timeline. The workflow remains intentionally independent of Google Cloud.
+
 Implement the initial API:
 
 - `POST /api/cases`;

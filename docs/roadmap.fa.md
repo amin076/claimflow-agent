@@ -134,6 +134,11 @@ claimflow-agent/
 
 ### فاز سه — Vertical Slice محلی با Mock AI
 
+**وضعیت: تکمیل شده.** API محلی مبتنی بر حافظه و محیط responsive در React اکنون
+ساخت پرونده، metadata سند synthetic، پردازش deterministic، فیلدهای متصل به
+evidence، issueهای validation، human review، فهرست پرونده‌ها و audit timeline را
+پوشش می‌دهند. این workflow عمداً مستقل از Google Cloud باقی مانده است.
+
 API اولیه:
 
 - `POST /api/cases`;
