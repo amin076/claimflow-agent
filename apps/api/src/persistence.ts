@@ -14,6 +14,7 @@ export { ApiError } from './errors.js';
 
 type MaybePromise<T> = T | Promise<T>;
 export interface CaseRepository {
+  update(id: string, change: (claim: ClaimCase) => ClaimCase): MaybePromise<ClaimCase | undefined>;
   list(): MaybePromise<ClaimCase[]>;
   get(id: string): MaybePromise<ClaimCase | undefined>;
   create(input: CreateCaseInput): MaybePromise<ClaimCase>;
@@ -21,6 +22,7 @@ export interface CaseRepository {
     id: string,
     input: AddDocumentInput,
     stored?: SourceDocument,
+    replaceId?: string,
   ): MaybePromise<ClaimCase | undefined>;
   process(id: string): MaybePromise<ClaimCase | 'NO_DOCUMENTS' | undefined>;
   review(id: string, input: ReviewCaseInput): MaybePromise<ClaimCase | undefined>;
@@ -76,8 +78,11 @@ export class FirestoreCaseRepository implements CaseRepository {
       return result;
     });
   }
-  addDocument(id: string, input: AddDocumentInput, stored?: SourceDocument) {
-    return this.mutate(id, (workflow) => workflow.addDocument(id, input, stored));
+  update(id: string, change: (claim: ClaimCase) => ClaimCase) {
+    return this.mutate(id, (workflow) => workflow.update(id, change));
+  }
+  addDocument(id: string, input: AddDocumentInput, stored?: SourceDocument, replaceId?: string) {
+    return this.mutate(id, (workflow) => workflow.addDocument(id, input, stored, replaceId));
   }
   process(id: string) {
     return this.mutate(id, (workflow) => workflow.process(id));

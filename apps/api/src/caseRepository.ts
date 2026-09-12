@@ -1,8 +1,8 @@
+import { applyHumanReview } from './extraction/review.js';
 import { ApiError } from './errors.js';
 import { randomUUID } from 'node:crypto';
 import {
   ClaimCaseSchema,
-  ReviewDecisionSchema,
   SourceDocumentSchema,
   type AddDocumentInput,
   type ClaimCase,
@@ -19,6 +19,15 @@ export class InMemoryCaseRepository {
 
   constructor(initial: ClaimCase[] = [createDemoCase()]) {
     for (const claim of initial) this.#cases.set(claim.id, cloneCase(claim));
+  }
+
+  update(id: string, change: (claim: ClaimCase) => ClaimCase): ClaimCase | undefined {
+    const current = this.#cases.get(id);
+    if (!current) return undefined;
+    const next = cloneCase(change(cloneCase(current)));
+    if (next.id !== id) throw new Error('Case identity cannot change');
+    this.#cases.set(id, next);
+    return cloneCase(next);
   }
 
   list(): ClaimCase[] {
@@ -72,12 +81,18 @@ export class InMemoryCaseRepository {
     caseId: string,
     input: AddDocumentInput,
     stored?: SourceDocument,
+    replaceId?: string,
   ): ClaimCase | undefined {
     const claim = this.#cases.get(caseId);
     if (!claim) return undefined;
 
-    if (claim.status !== 'DRAFT')
-      throw new ApiError(409, 'CASE_NOT_DRAFT', 'Create a draft case for a new upload.');
+    if (claim.status === 'PROCESSING' || (claim.status !== 'DRAFT' && !replaceId))
+      throw new ApiError(409, 'CASE_NOT_DRAFT', 'Create a draft or explicitly replace a source.');
+    const replaced = replaceId ? claim.documents.find((doc) => doc.id === replaceId) : undefined;
+    if (replaceId && (!replaced || !stored))
+      throw new ApiError(404, 'DOCUMENT_NOT_FOUND', 'Choose a current source to replace.');
+    if (!replaceId && claim.documents.length >= 3)
+      throw new ApiError(409, 'DOCUMENT_LIMIT', 'Use at most three source documents.');
     const timestamp = new Date().toISOString();
     const document =
       stored ??
@@ -95,7 +110,17 @@ export class InMemoryCaseRepository {
     const updated = ClaimCaseSchema.parse({
       ...claim,
       updatedAt: timestamp,
-      documents: [...claim.documents, document],
+      status: 'DRAFT',
+      ...(replaceId
+        ? {
+            fields: [],
+            issues: [],
+            summary: 'Source changed. Previous derived fields and validation are invalidated.',
+            suggestedNextAction: 'Run processing explicitly for the new source set.',
+            supersededDocuments: [...(claim.supersededDocuments ?? []), replaced!],
+          }
+        : {}),
+      documents: [...claim.documents.filter((doc) => doc.id !== replaceId), document],
       auditEvents: [
         ...claim.auditEvents,
         {
@@ -104,9 +129,9 @@ export class InMemoryCaseRepository {
           timestamp,
           actorType: 'HUMAN',
           actorId: 'local-user',
-          action: 'DOCUMENT_ADDED',
+          action: replaceId ? 'DOCUMENT_REPLACED_OUTPUT_INVALIDATED' : 'DOCUMENT_ADDED',
           outcome: 'SUCCESS',
-          inputReferences: [],
+          inputReferences: replaced ? [replaced.id] : [],
           outputReferences: [document.id],
           summary: `Added synthetic document ${document.filename}.`,
         },
@@ -256,84 +281,6 @@ export class InMemoryCaseRepository {
   }
 
   review(caseId: string, input: ReviewCaseInput): ClaimCase | undefined {
-    const claim = this.#cases.get(caseId);
-    if (!claim) return undefined;
-
-    const timestamp = new Date().toISOString();
-    const field = input.fieldName
-      ? claim.fields.find((candidate) => candidate.name === input.fieldName)
-      : undefined;
-    const decision = ReviewDecisionSchema.parse({
-      id: `review-${randomUUID()}`,
-      caseId,
-      reviewerId: input.reviewerId,
-      action: input.action,
-      ...(input.fieldName ? { fieldName: input.fieldName } : {}),
-      ...(field ? { previousValue: field.value } : {}),
-      ...(input.correctedValue !== undefined ? { correctedValue: input.correctedValue } : {}),
-      reason: input.reason,
-      createdAt: timestamp,
-    });
-
-    const fields = claim.fields.map((candidate) => {
-      if (!input.fieldName || candidate.name !== input.fieldName) return candidate;
-      if (input.action === 'ACCEPT') {
-        return { ...candidate, status: 'ACCEPTED' as const, requiresReview: false };
-      }
-      if (input.action === 'CORRECT') {
-        return {
-          ...candidate,
-          value: input.correctedValue ?? null,
-          displayValue: String(input.correctedValue ?? '') || 'Not provided',
-          status: 'CORRECTED' as const,
-          requiresReview: false,
-        };
-      }
-      if (input.action === 'REJECT') {
-        return { ...candidate, status: 'REJECTED' as const, requiresReview: false };
-      }
-      return candidate;
-    });
-    const issues = claim.issues.map((issue) =>
-      input.fieldName &&
-      issue.fieldNames.includes(input.fieldName) &&
-      ['ACCEPT', 'CORRECT', 'REJECT'].includes(input.action)
-        ? { ...issue, status: 'RESOLVED' as const, resolvedAt: timestamp }
-        : issue,
-    );
-    const openIssues = issues.filter((issue) => issue.status === 'OPEN');
-    const status =
-      input.action === 'REQUEST_INPUT'
-        ? 'NEEDS_INPUT'
-        : input.action === 'ESCALATE' || openIssues.length > 0
-          ? 'NEEDS_REVIEW'
-          : 'READY';
-
-    const updated = ClaimCaseSchema.parse({
-      ...claim,
-      status,
-      updatedAt: timestamp,
-      fields,
-      issues,
-      reviews: [...claim.reviews, decision],
-      auditEvents: [
-        ...claim.auditEvents,
-        {
-          id: `audit-${randomUUID()}`,
-          caseId,
-          timestamp,
-          actorType: 'HUMAN',
-          actorId: input.reviewerId,
-          action: `REVIEW_${input.action}`,
-          outcome: 'SUCCESS',
-          inputReferences: input.fieldName ? [input.fieldName] : [],
-          outputReferences: [decision.id],
-          summary: input.reason,
-        },
-      ],
-    });
-
-    this.#cases.set(caseId, updated);
-    return cloneCase(updated);
+    return this.update(caseId, (claim) => applyHumanReview(claim, input));
   }
 }

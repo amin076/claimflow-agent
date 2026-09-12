@@ -15,7 +15,12 @@ export const ClaimCaseSchema = z
     title: z.string().trim().min(1).max(200),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
+    processingId: IdentifierSchema.optional(),
+    processingStartedAt: TimestampSchema.optional(),
+    summary: z.string().max(2000).optional(),
+    suggestedNextAction: z.string().max(1000).optional(),
     documents: z.array(SourceDocumentSchema),
+    supersededDocuments: z.array(SourceDocumentSchema).optional(),
     fields: z.array(ExtractedFieldSchema),
     issues: z.array(ValidationIssueSchema),
     agentRuns: z.array(AgentRunSchema),
@@ -25,6 +30,7 @@ export const ClaimCaseSchema = z
   .superRefine((claim, context) => {
     const records = [
       ...claim.documents,
+      ...(claim.supersededDocuments ?? []),
       ...claim.issues,
       ...claim.agentRuns,
       ...claim.reviews,

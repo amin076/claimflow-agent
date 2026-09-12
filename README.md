@@ -322,9 +322,13 @@ Licensed under the [Apache License 2.0](LICENSE).
 
 ## Phases 4–5: cloud adapters and deployment
 
-Actual synthetic PDF/image upload and private download, Firestore transactions, GCS/local file adapters, and a combined React/API container are implemented. Live deployment and cloud persistence verification are pending. AI remains mock.
+Actual synthetic PDF/image upload and private download, Firestore transactions, GCS/local file adapters, and a combined React/API container are implemented. Live deployment and cloud persistence verification passed on revision `claimflow-api-00002-klk`. Local mode defaults to mock; see Phases 6–8 for Vertex activation.
 
 - [Deployment and verification](docs/cloud-deployment.md)
 - [راهنمای فارسی](docs/cloud-deployment.fa.md)
 
 The roadmap continues through Phase 12; Phases 6–8 cover Gemini extraction, ADK orchestration, and deterministic validation with human review.
+
+## Phases 6–8
+
+Gemini extraction, the six-step ADK Workflow, deterministic validation and evidence-backed human corrections are implemented. Phases 4–5 passed live persistence verification; live Gemini acceptance is pending. See [English guide](docs/phases-6-8.md) / [راهنمای فارسی](docs/phases-6-8.fa.md). Deploy with `scripts/deploy-cloud.ps1 -AiMode vertex`; test with `node scripts/smoke-vertex.mjs http://localhost:8081`.

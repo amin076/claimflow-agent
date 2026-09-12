@@ -9,7 +9,16 @@ const EnvironmentSchema = z.object({
   GOOGLE_CLOUD_LOCATION: z.string().default('australia-southeast1'),
   STORAGE_MODE: z.enum(['local', 'gcs']).default('local'),
   DATABASE_MODE: z.enum(['memory', 'firestore']).default('memory'),
-  AI_MODE: z.literal('mock').default('mock'),
+  AI_MODE: z.enum(['mock', 'vertex']).default('mock'),
+  GEMINI_MODEL: z
+    .string()
+    .regex(/^gemini-[a-z0-9.-]+$/)
+    .default('gemini-3.5-flash'),
+  VERTEX_LOCATION: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .default('global'),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(45000).default(40000),
   FIRESTORE_DATABASE_ID: z.string().min(1).default('(default)'),
   DOCUMENT_BUCKET: z.string().optional(),
   UPLOAD_DIR: z.string().default('uploads'),
@@ -21,7 +30,9 @@ export type Environment = z.infer<typeof EnvironmentSchema>;
 export const readEnvironment = (source: NodeJS.ProcessEnv = process.env): Environment =>
   EnvironmentSchema.superRefine((env, context) => {
     if (
-      (env.DATABASE_MODE === 'firestore' || env.STORAGE_MODE === 'gcs') &&
+      (env.DATABASE_MODE === 'firestore' ||
+        env.STORAGE_MODE === 'gcs' ||
+        env.AI_MODE === 'vertex') &&
       !env.GOOGLE_CLOUD_PROJECT
     ) {
       context.addIssue({

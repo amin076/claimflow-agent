@@ -164,7 +164,7 @@ Use deterministic mock extraction first. This proves the data model, API contrac
 
 ### Phase 4 — Google Cloud foundation
 
-**Status: deployment implementation ready; live deployment verification pending.** Foundation resources were reported created by Amin. See [deployment guide](./cloud-deployment.md).
+**Status: live exit gate passed.** Amin verified private deployment and revision `claimflow-api-00002-klk` serving 100% traffic. See [deployment guide](./cloud-deployment.md).
 
 Use Google Cloud project `claimflow-ai-agents` and enable only the required services:
 
@@ -191,7 +191,7 @@ Use least-privilege IAM. Developers use their own Google identities; credentials
 
 ### Phase 5 — Cloud Storage and Firestore
 
-**Status: adapters and upload UI implemented; live persistence exit gate pending.** Firestore transactions, private original-file storage, same-origin UI and CI verification are implemented.
+**Status: live exit gate passed.** The original case, document, review and audit were recovered after the revision change. Firestore transactions, private original-file storage, same-origin UI and CI verification are implemented.
 
 Use Cloud Storage for original uploads and generated file artifacts. Use Firestore for case metadata, fields, issues, processing state, reviews, and audit events.
 
@@ -218,6 +218,8 @@ Do not store entire uploaded documents inside Firestore.
 
 ### Phase 6 — Gemini multimodal extraction
 
+**Status: implemented and covered by automated tests; live Gemini/UI acceptance pending.** See [Phases 6–8](./phases-6-8.md).
+
 - Send the document, focused instructions, and required JSON structure to Gemini on Vertex AI.
 - Request extracted values, confidence, source evidence, ambiguity notes, and missing fields.
 - Validate every response with Zod.
@@ -228,6 +230,8 @@ Do not store entire uploaded documents inside Firestore.
 **Exit:** Gemini processes one synthetic PDF or image and produces schema-valid, evidence-linked fields.
 
 ### Phase 7 — ADK agent workflow
+
+**Status: implemented and covered by automated tests; live Gemini/UI acceptance pending.** See [Phases 6–8](./phases-6-8.md).
 
 Implement specialized responsibilities inside one controlled backend workflow:
 
@@ -251,6 +255,8 @@ Intake → Quality → Extraction → Validation → Case planning → Human rev
 **Exit:** agent steps, outputs, failures, and routing decisions are visible in the audit trail.
 
 ### Phase 8 — Deterministic rules and human review
+
+**Status: implemented and covered by automated tests; live Gemini/UI acceptance pending.** See [Phases 6–8](./phases-6-8.md).
 
 Implement TypeScript rules such as:
 

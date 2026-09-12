@@ -10,6 +10,8 @@ async function request(path, init) {
 assert.equal((await (await request('/health')).json()).status, 'ok');
 assert.equal((await (await request('/ready')).json()).status, 'ready');
 assert.match(await (await request('/')).text(), /<div id="root"><\/div>/);
+const config = await (await request('/api/config')).json();
+assert.equal(config.aiMode, 'mock', 'Use smoke-vertex.mjs for real model verification.');
 const claim = await (
   await request('/api/cases', {
     method: 'POST',
@@ -31,7 +33,9 @@ assert.equal(
 const processed = await (
   await request(`/api/cases/${claim.id}/process`, { method: 'POST' })
 ).json();
-assert.equal(processed.status, 'NEEDS_REVIEW');
+assert.equal(processed.status, 'NEEDS_INPUT');
+assert.equal(processed.agentRuns.length, 6);
+assert.ok(processed.agentRuns.every((run) => run.status === 'SUCCEEDED'));
 const reviewed = await (
   await request(`/api/cases/${claim.id}/review`, {
     method: 'PATCH',
@@ -44,7 +48,7 @@ const reviewed = await (
   })
 ).json();
 assert.equal(reviewed.reviews.length, 1);
-assert.equal((await (await request(`/api/cases/${claim.id}/audit-events`)).json()).length, 4);
+assert.equal((await (await request(`/api/cases/${claim.id}/audit-events`)).json()).length, 17);
 console.log(
   JSON.stringify(
     {

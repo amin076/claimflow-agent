@@ -1,5 +1,7 @@
 # Phases 4–5: cloud persistence and private deployment
 
+> Historical Phase 4–5 guide. The live persistence gate has now passed. For current AI modes, resource settings and acceptance tests, use [Phases 6–8](./phases-6-8.md).
+
 [فارسی](./cloud-deployment.fa.md)
 
 ## What is implemented
