@@ -185,9 +185,8 @@ updated programs are available on `PATH`.
 ### First-time setup on Windows
 
 ```powershell
-cd C:\Physics
 git clone https://github.com/amin076/claimflow-agent.git
-cd claimflow-agent
+Set-Location claimflow-agent
 git switch main
 git pull origin main
 npm ci
@@ -213,14 +212,12 @@ This is useful when diagnosing errors or working on only one application.
 Terminal 1:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:api
 ```
 
 Terminal 2:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:web
 ```
 
@@ -234,7 +231,6 @@ Invoke-RestMethod http://localhost:8080/api/cases/demo
 ### Start work each day
 
 ```powershell
-cd C:\Physics\claimflow-agent
 git switch main
 git pull origin main
 npm ci
