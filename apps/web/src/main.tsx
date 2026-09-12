@@ -7,11 +7,26 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: { main: '#0c6f73' },
-    secondary: { main: '#ffb547' },
-    background: { default: '#f4f7f8' },
+    secondary: { main: '#e9a23b', contrastText: '#172326' },
+    background: { default: '#f3f7f7', paper: '#ffffff' },
   },
-  shape: { borderRadius: 12 },
-  typography: { fontFamily: 'Inter, system-ui, sans-serif' },
+  shape: { borderRadius: 14 },
+  typography: {
+    fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    h3: { fontSize: 'clamp(2rem, 5vw, 3rem)' },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: { textTransform: 'none', fontWeight: 750, minHeight: 42 },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: { borderColor: '#d9e2e3' },
+      },
+    },
+  },
 });
 
 const root = document.getElementById('root');
