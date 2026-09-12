@@ -11,6 +11,7 @@ import {
   Select,
   Stack,
   Typography,
+  TextField,
 } from '@mui/material';
 import type { ClaimCase, ClaimFieldName, DocumentType, ReviewCaseInput } from '@claimflow/domain';
 import { useCallback, useEffect, useState } from 'react';
@@ -21,20 +22,31 @@ import { CaseSummary } from '../components/CaseSummary.js';
 import { ExtractedFieldList } from '../components/ExtractedFieldList.js';
 import { IssueList } from '../components/IssueList.js';
 import { NewCaseForm } from '../components/NewCaseForm.js';
-import { caseApi } from '../services/caseApi.js';
+import { AgentRunList } from '../components/AgentRunList.js';
+import { MissingFieldForm } from '../components/MissingFieldForm.js';
+import { caseApi, type RuntimeInfo } from '../services/caseApi.js';
 
 const errorMessage = (cause: unknown) =>
   cause instanceof Error ? cause.message : 'An unexpected error occurred.';
 
 export const CaseWorkspacePage = () => {
+  const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfo>();
+  const [reviewReason, setReviewReason] = useState('');
   const [cases, setCases] = useState<ClaimCase[]>([]);
   const [selected, setSelected] = useState<ClaimCase>();
   const [documentType, setDocumentType] = useState<DocumentType>('CLAIM_FORM');
+  const [replaceId, setReplaceId] = useState<string>();
   const [uploadFile, setUploadFile] = useState<File>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+
+  useEffect(() => {
+    setReplaceId(undefined);
+    setUploadFile(undefined);
+    setReviewReason('');
+  }, [selected?.id]);
 
   const refresh = useCallback(async (preferredId?: string) => {
     const nextCases = await caseApi.list();
@@ -46,10 +58,31 @@ export const CaseWorkspacePage = () => {
   }, []);
 
   useEffect(() => {
-    refresh()
+    Promise.all([refresh(), caseApi.config().then(setRuntimeInfo)])
       .catch((cause: unknown) => setError(errorMessage(cause)))
       .finally(() => setLoading(false));
   }, [refresh]);
+
+  useEffect(() => {
+    if (!busy) return;
+    let active = true;
+    const timer = setInterval(() => {
+      void caseApi
+        .list()
+        .then((nextCases) => {
+          if (!active) return;
+          setCases(nextCases);
+          setSelected((current) => nextCases.find((claim) => claim.id === current?.id) ?? current);
+        })
+        .catch(() => {
+          /* The primary request reports errors; polling is best effort. */
+        });
+    }, 2000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [busy]);
 
   const run = async (action: () => Promise<ClaimCase>, success: string) => {
     setBusy(true);
@@ -58,6 +91,8 @@ export const CaseWorkspacePage = () => {
     try {
       const claim = await action();
       setSelected(claim);
+      setReplaceId(undefined);
+      setUploadFile(undefined);
       await refresh(claim.id);
       setNotice(success);
     } catch (cause) {
@@ -71,8 +106,13 @@ export const CaseWorkspacePage = () => {
     action: ReviewCaseInput['action'],
     fieldName?: ClaimFieldName,
     correctedValue?: string,
+    evidence?: ReviewCaseInput['evidence'],
   ) => {
     if (!selected) return;
+    if (!reviewReason.trim()) {
+      setError('Enter a review reason before saving a decision.');
+      return;
+    }
     const labels: Record<ReviewCaseInput['action'], string> = {
       ACCEPT: 'Accepted by the local reviewer.',
       CORRECT: 'Correction saved with an audit event.',
@@ -83,10 +123,8 @@ export const CaseWorkspacePage = () => {
     const input: ReviewCaseInput = {
       reviewerId: 'local-reviewer',
       action,
-      reason:
-        action === 'CORRECT'
-          ? 'Corrected during local human review.'
-          : `${action.replaceAll('_', ' ')} selected during local human review.`,
+      reason: reviewReason.trim(),
+      ...(evidence ? { evidence } : {}),
       ...(fieldName ? { fieldName } : {}),
       ...(correctedValue !== undefined ? { correctedValue } : {}),
     };
@@ -101,11 +139,18 @@ export const CaseWorkspacePage = () => {
             Human review workspace
           </Typography>
           <Typography variant="h6" color="text.secondary" sx={{ mt: 1, maxWidth: 820 }}>
-            Create a synthetic case, upload a document, run deterministic extraction, and review
-            every uncertain result with its source evidence.
+            Create a synthetic case, upload a document, run the document workflow, and review every
+            uncertain result with its source evidence.
           </Typography>
         </Box>
 
+        <Alert severity={runtimeInfo?.aiMode === 'vertex' ? 'info' : 'warning'}>
+          {runtimeInfo
+            ? runtimeInfo.aiMode === 'vertex'
+              ? `Gemini extraction · ${runtimeInfo.model} · ADK workflow. Confidence and excerpts are model estimates; verify them against the original.`
+              : 'Mock AI · demo values only. Uploaded content is not interpreted by the mock provider.'
+            : 'Loading processing mode…'}
+        </Alert>
         {error && (
           <Alert severity="error" onClose={() => setError(undefined)}>
             {error}
@@ -136,17 +181,48 @@ export const CaseWorkspacePage = () => {
                 busy={busy}
                 onCreate={(title) => run(() => caseApi.create({ title }), 'Draft case created.')}
               />
-              <CaseList cases={cases} selectedId={selected?.id} onSelect={setSelected} />
+              <CaseList
+                cases={cases}
+                selectedId={selected?.id}
+                onSelect={(claim) => {
+                  if (!busy) setSelected(claim);
+                }}
+              />
             </Stack>
 
             {selected ? (
               <Stack spacing={3}>
                 <CaseSummary claim={selected} />
-                {selected.status === 'DRAFT' && (
+                {selected.summary && (
+                  <Alert severity="info">
+                    {selected.summary} {selected.suggestedNextAction}
+                  </Alert>
+                )}
+                <AgentRunList runs={selected.agentRuns} />
+                {selected.status === 'PROCESSING' && (
+                  <Alert severity="info">
+                    Processing is in progress. If it was interrupted, wait two minutes before
+                    recovery.
+                    <Button
+                      disabled={busy}
+                      onClick={() =>
+                        run(
+                          () => caseApi.recover(selected.id),
+                          'Interrupted workflow recovered without another model call.',
+                        )
+                      }
+                    >
+                      Recover interrupted run
+                    </Button>
+                  </Alert>
+                )}
+                {(selected.status === 'DRAFT' || replaceId) && selected.status !== 'PROCESSING' && (
                   <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
                     <Stack spacing={2}>
                       <Typography variant="h6" component="h3" sx={{ fontWeight: 750 }}>
-                        1. Upload a synthetic document
+                        {replaceId
+                          ? 'Replace source and invalidate previous output'
+                          : '1. Upload a synthetic document'}
                       </Typography>
                       <Alert severity="warning">
                         Synthetic PDF, JPEG or PNG only, up to 5 MiB. Mock extraction returns demo
@@ -182,16 +258,19 @@ export const CaseWorkspacePage = () => {
                       </Typography>
                       <Button
                         variant="contained"
-                        disabled={busy || !uploadFile}
+                        disabled={
+                          busy || !uploadFile || (!replaceId && selected.documents.length >= 3)
+                        }
                         onClick={() => {
                           if (uploadFile)
                             void run(
-                              () => caseApi.upload(selected.id, uploadFile, documentType),
-                              'Synthetic file uploaded.',
+                              () =>
+                                caseApi.upload(selected.id, uploadFile, documentType, replaceId),
+                              'Synthetic file uploaded. Processing must be started explicitly.',
                             );
                         }}
                       >
-                        Upload synthetic document
+                        {replaceId ? 'Replace source' : 'Upload synthetic document'}
                       </Button>
                     </Stack>
                   </Paper>
@@ -203,8 +282,9 @@ export const CaseWorkspacePage = () => {
                         2. Process case
                       </Typography>
                       <Typography color="text.secondary">
-                        Run deterministic mock extraction and validation. No AI model is called.
-                        These are demo results, not facts extracted from your upload.
+                        {runtimeInfo?.aiMode === 'vertex'
+                          ? 'One bounded Gemini request for all uploaded sources, followed by deterministic checks and human review.'
+                          : 'Run the six-step ADK workflow with deterministic mock data. No model is called.'}
                       </Typography>
                       <Button
                         variant="contained"
@@ -213,11 +293,15 @@ export const CaseWorkspacePage = () => {
                         onClick={() =>
                           run(
                             () => caseApi.process(selected.id),
-                            'Mock extraction completed. Human review is required.',
+                            'Workflow finished. Inspect its steps, issues and source evidence.',
                           )
                         }
                       >
-                        {busy ? 'Processing…' : 'Run mock processing'}
+                        {busy
+                          ? 'Processing…'
+                          : runtimeInfo?.aiMode === 'vertex'
+                            ? 'Extract with Gemini'
+                            : 'Run mock workflow'}
                       </Button>
                     </Stack>
                   </Paper>
@@ -228,6 +312,17 @@ export const CaseWorkspacePage = () => {
                     {selected.documents.map((document) => (
                       <Box key={document.id} sx={{ mt: 1 }}>
                         <Typography variant="body2">{document.filename}</Typography>
+                        {selected.status !== 'PROCESSING' && (
+                          <Button
+                            disabled={busy}
+                            onClick={() => {
+                              setReplaceId(document.id);
+                              setUploadFile(undefined);
+                            }}
+                          >
+                            Replace this source
+                          </Button>
+                        )}
                         {document.storageUri.endsWith(`/documents/${document.id}/original`) ? (
                           <Button
                             component="a"
@@ -242,14 +337,31 @@ export const CaseWorkspacePage = () => {
                     ))}
                   </Paper>
                 )}
+                {selected.status !== 'DRAFT' && (
+                  <TextField
+                    label="Reason for this review decision"
+                    value={reviewReason}
+                    onChange={(event) => setReviewReason(event.target.value)}
+                    multiline
+                    fullWidth
+                    helperText="Record what you checked against the source. Required for accept, correct, reject or routing."
+                  />
+                )}
+                <MissingFieldForm
+                  key={selected.id}
+                  claim={selected}
+                  busy={busy || selected.status === 'PROCESSING'}
+                  onCorrect={(field, value, evidence) => review('CORRECT', field, value, evidence)}
+                />
                 <ExtractedFieldList
+                  caseId={selected.id}
                   fields={selected.fields}
-                  busy={busy}
+                  busy={busy || selected.status === 'PROCESSING'}
                   onReview={(action, fieldName, value) => review(action, fieldName, value)}
                 />
                 <IssueList
                   issues={selected.issues}
-                  busy={busy}
+                  busy={busy || selected.status === 'PROCESSING'}
                   onRoute={(action) => review(action)}
                 />
                 <AuditTimeline events={selected.auditEvents} />

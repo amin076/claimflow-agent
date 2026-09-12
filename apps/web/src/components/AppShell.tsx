@@ -19,7 +19,7 @@ export const AppShell = ({ children }: PropsWithChildren) => (
             </Typography>
           </Box>
           <Chip
-            label="SYNTHETIC · MOCK AI"
+            label="SYNTHETIC DOCUMENTS"
             sx={{ bgcolor: '#d8f3dc', color: '#1b4332', fontWeight: 800, alignSelf: 'start' }}
           />
         </Stack>

@@ -54,7 +54,7 @@ describe('durable file workflow', () => {
     ).toBe(404);
     expect(
       (await app.inject({ method: 'POST', url: `/api/cases/${claim.id}/process` })).json().status,
-    ).toBe('NEEDS_REVIEW');
+    ).toBe('NEEDS_INPUT');
     expect(
       (
         await app.inject({
@@ -64,7 +64,7 @@ describe('durable file workflow', () => {
         })
       ).statusCode,
     ).toBe(200);
-    expect((await app.inject(`/api/cases/${claim.id}/audit-events`)).json()).toHaveLength(4);
+    expect((await app.inject(`/api/cases/${claim.id}/audit-events`)).json()).toHaveLength(17);
     expect(
       (
         await app.inject({
@@ -133,6 +133,9 @@ describe('cloud configuration and limits', () => {
     expect(() => readEnvironment({ STORAGE_MODE: 'gcs', GOOGLE_CLOUD_PROJECT: 'test' })).toThrow();
     expect(() => readEnvironment({ NODE_ENV: 'production' })).toThrow();
     expect(() => readEnvironment({ AI_MODE: 'vertex' })).toThrow();
+    expect(readEnvironment({ AI_MODE: 'vertex', GOOGLE_CLOUD_PROJECT: 'test' }).AI_MODE).toBe(
+      'vertex',
+    );
     expect(readEnvironment({})).toMatchObject({
       DATABASE_MODE: 'memory',
       STORAGE_MODE: 'local',

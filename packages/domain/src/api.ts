@@ -20,6 +20,13 @@ export const ReviewCaseInputSchema = z
     action: z.enum(['ACCEPT', 'CORRECT', 'REJECT', 'ESCALATE', 'REQUEST_INPUT']),
     fieldName: ClaimFieldNameSchema.optional(),
     correctedValue: ExtractedValueSchema.optional(),
+    evidence: z
+      .object({
+        documentId: IdentifierSchema,
+        page: z.number().int().positive().max(5),
+        excerpt: z.string().trim().min(1).max(1000),
+      })
+      .optional(),
     reason: z.string().trim().min(1).max(2_000),
   })
   .superRefine((decision, context) => {

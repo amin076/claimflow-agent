@@ -111,7 +111,7 @@ describe('API', () => {
       url: `/api/cases/${createResponse.json().id}/process`,
     });
     expect(response.statusCode).toBe(409);
-    expect(response.json().error).toBe('CASE_HAS_NO_DOCUMENTS');
+    expect(response.json().error).toBe('DOCUMENT_COUNT');
   });
 
   it('returns validation and not-found errors without exposing internals', async () => {

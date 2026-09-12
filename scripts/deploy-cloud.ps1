@@ -1,4 +1,9 @@
 # Run from the repository root after local checks pass. Uses the caller's Google identity.
+param(
+  [ValidateSet('mock', 'vertex')][string]$AiMode = 'mock',
+  [ValidatePattern('^gemini-[a-z0-9.-]+$')][string]$GeminiModel = 'gemini-3.5-flash',
+  [ValidatePattern('^[a-z0-9-]+$')][string]$VertexLocation = 'global'
+)
 $ErrorActionPreference = 'Stop'
 function Invoke-Gcloud {
   & gcloud @args
@@ -15,7 +20,11 @@ Invoke-Gcloud firestore databases describe '--database=(default)' "--project=$pr
 Invoke-Gcloud storage buckets describe "gs://$project-documents" "--project=$project"
 Invoke-Gcloud artifacts repositories describe claimflow-containers "--location=$region" "--project=$project"
 Invoke-Gcloud iam service-accounts describe $runtime "--project=$project"
+if ($AiMode -eq 'vertex') {
+  Invoke-Gcloud services enable aiplatform.googleapis.com "--project=$project"
+  Invoke-Gcloud projects add-iam-policy-binding $project "--member=serviceAccount:$runtime" '--role=roles/aiplatform.user' '--condition=None'
+}
 Invoke-Gcloud builds submit . "--project=$project" '--config=infrastructure/cloudbuild.yaml' "--substitutions=_IMAGE=$image"
-Invoke-Gcloud run deploy claimflow-api "--project=$project" "--region=$region" "--image=$image" "--service-account=$runtime" '--no-allow-unauthenticated' '--min-instances=0' '--max-instances=1' '--concurrency=20' '--memory=512Mi' '--cpu=1' '--timeout=60' '--port=8080' "--set-env-vars=NODE_ENV=production,SERVE_WEB=true,DATABASE_MODE=firestore,STORAGE_MODE=gcs,AI_MODE=mock,GOOGLE_CLOUD_PROJECT=$project,GOOGLE_CLOUD_LOCATION=$region,FIRESTORE_DATABASE_ID=(default),DOCUMENT_BUCKET=$project-documents"
+Invoke-Gcloud run deploy claimflow-api "--project=$project" "--region=$region" "--image=$image" "--service-account=$runtime" '--no-allow-unauthenticated' '--min-instances=0' '--max-instances=1' '--concurrency=4' '--memory=1Gi' '--cpu=1' '--timeout=120' '--port=8080' "--set-env-vars=NODE_ENV=production,SERVE_WEB=true,DATABASE_MODE=firestore,STORAGE_MODE=gcs,AI_MODE=$AiMode,GEMINI_MODEL=$GeminiModel,VERTEX_LOCATION=$VertexLocation,GOOGLE_CLOUD_PROJECT=$project,GOOGLE_CLOUD_LOCATION=$region,FIRESTORE_DATABASE_ID=(default),DOCUMENT_BUCKET=$project-documents"
 Invoke-Gcloud run services describe claimflow-api "--project=$project" "--region=$region" '--format=value(status.url)'
 Write-Host 'Private service deployed. Verify /ready and the full workflow through gcloud run services proxy; see docs/cloud-deployment.md.'

@@ -11,3 +11,6 @@ node_modules
 uploads
 coverage
 sample-data/private
+
+# Local Keynu runtime memory is not application source.
+.keynu/

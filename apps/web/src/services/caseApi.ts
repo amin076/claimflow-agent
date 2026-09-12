@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   ClaimCaseSchema,
   type AddDocumentInput,
@@ -31,13 +32,29 @@ const jsonRequest = (method: string, body?: unknown): RequestInit =>
         body: JSON.stringify(body),
       };
 
+const RuntimeInfoSchema = z.object({
+  aiMode: z.enum(['mock', 'vertex']),
+  model: z.string(),
+  workflow: z.string(),
+  maxDocuments: z.number(),
+  maxTotalPages: z.number(),
+});
+export type RuntimeInfo = z.infer<typeof RuntimeInfoSchema>;
 export const caseApi = {
-  async upload(id: string, file: File, type: DocumentType): Promise<ClaimCase> {
+  async config(): Promise<RuntimeInfo> {
+    return RuntimeInfoSchema.parse(await request('/api/config'));
+  },
+  async recover(id: string): Promise<ClaimCase> {
+    return ClaimCaseSchema.parse(
+      await request(`/api/cases/${encodeURIComponent(id)}/recover-processing`, jsonRequest('POST')),
+    );
+  },
+  async upload(id: string, file: File, type: DocumentType, replaceId?: string): Promise<ClaimCase> {
     const body = new FormData();
     body.append('file', file);
     return ClaimCaseSchema.parse(
       await request(
-        `/api/cases/${encodeURIComponent(id)}/uploads?type=${encodeURIComponent(type)}`,
+        `/api/cases/${encodeURIComponent(id)}/uploads?type=${encodeURIComponent(type)}${replaceId ? `&replaceId=${encodeURIComponent(replaceId)}` : ''}`,
         { method: 'POST', body },
       ),
     );

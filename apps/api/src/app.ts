@@ -49,6 +49,13 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'claimflow-api' }));
+  app.get('/api/config', async () => ({
+    aiMode: environment.AI_MODE,
+    model: environment.AI_MODE === 'vertex' ? environment.GEMINI_MODEL : 'deterministic-local-mock',
+    workflow: 'adk-workflow-v1',
+    maxDocuments: 3,
+    maxTotalPages: 5,
+  }));
   app.get('/api/cases/demo', async () => createDemoCase());
 
   app.post('/api/cases', async (request, reply) => {
@@ -77,7 +84,12 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
 
   app.post<{ Params: { id: string } }>('/api/cases/:id/process', async (request, reply) => {
     const id = IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.params.id);
-    const result = await cases.process(id);
+    const current = await cases.get(id);
+    const legacyMock =
+      environment.AI_MODE === 'mock' &&
+      current?.documents.length &&
+      current.documents.every((doc) => !doc.storageUri.endsWith(documentKey(id, doc.id)));
+    const result = legacyMock ? await cases.process(id) : await runtime.processor.process(id);
     if (!result) return reply.status(404).send({ error: 'CASE_NOT_FOUND' });
     if (result === 'NO_DOCUMENTS') {
       return reply.status(409).send({
@@ -87,6 +99,16 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
     }
     return result;
   });
+
+  app.post<{ Params: { id: string } }>(
+    '/api/cases/:id/recover-processing',
+    async (request, reply) => {
+      const id = IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.params.id);
+      return (
+        (await runtime.processor.recover(id)) ?? reply.status(404).send({ error: 'CASE_NOT_FOUND' })
+      );
+    },
+  );
 
   app.patch<{ Params: { id: string } }>('/api/cases/:id/review', async (request, reply) => {
     const id = IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.params.id);
@@ -110,15 +132,22 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
       return reply.status(503).send({ status: 'unavailable' });
     }
   });
-  app.post<{ Params: { id: string }; Querystring: { type?: string } }>(
+  app.post<{ Params: { id: string }; Querystring: { type?: string; replaceId?: string } }>(
     '/api/cases/:id/uploads',
     async (request, reply) => {
       const id = IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.params.id);
       const type = DocumentTypeSchema.parse(request.query.type);
       const claim = await cases.get(id);
       if (!claim) return reply.status(404).send({ error: 'CASE_NOT_FOUND' });
-      if (claim.status !== 'DRAFT')
-        throw new ApiError(409, 'CASE_NOT_DRAFT', 'Create a draft case for a new upload.');
+      const replaceId = request.query.replaceId
+        ? IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.query.replaceId)
+        : undefined;
+      if (claim.status === 'PROCESSING' || (claim.status !== 'DRAFT' && !replaceId))
+        throw new ApiError(409, 'CASE_NOT_DRAFT', 'Create a draft or replace a source.');
+      if (replaceId && !claim.documents.some((doc) => doc.id === replaceId))
+        throw new ApiError(404, 'DOCUMENT_NOT_FOUND', 'Choose a source in this case.');
+      if (!replaceId && claim.documents.length >= 3)
+        throw new ApiError(409, 'DOCUMENT_LIMIT', 'Use at most three documents.');
       const file = await request.file();
       if (!file) throw new ApiError(400, 'FILE_REQUIRED', 'Select one synthetic file.');
       const bytes = await file.toBuffer();
@@ -155,6 +184,7 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
           id,
           { filename, mimeType: file.mimetype, type },
           document,
+          replaceId,
         );
         if (!result) throw new ApiError(404, 'CASE_NOT_FOUND', 'Case no longer exists.');
         return reply.status(201).send(result);
@@ -173,7 +203,9 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
         request.params.documentId,
       );
       const claim = await cases.get(id);
-      const document = claim?.documents.find((candidate) => candidate.id === documentId);
+      const document = [...(claim?.documents ?? []), ...(claim?.supersededDocuments ?? [])].find(
+        (candidate) => candidate.id === documentId,
+      );
       const key = documentKey(id, documentId);
       if (!document || !document.storageUri.endsWith(key))
         return reply.status(404).send({ error: 'FILE_NOT_FOUND' });

@@ -27,3 +27,6 @@ npm-debug.log*
 # Generated or sensitive samples
 sample-data/private/
 uploads/
+
+# Local Keynu runtime memory is not application source.
+.keynu/

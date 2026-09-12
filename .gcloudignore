@@ -12,3 +12,6 @@
 **/service-account*.json
 uploads
 sample-data/private
+
+# Local Keynu runtime memory is not application source.
+.keynu/
