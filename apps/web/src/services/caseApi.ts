@@ -3,6 +3,7 @@ import {
   type AddDocumentInput,
   type ClaimCase,
   type CreateCaseInput,
+  type DocumentType,
   type ReviewCaseInput,
 } from '@claimflow/domain';
 
@@ -31,6 +32,16 @@ const jsonRequest = (method: string, body?: unknown): RequestInit =>
       };
 
 export const caseApi = {
+  async upload(id: string, file: File, type: DocumentType): Promise<ClaimCase> {
+    const body = new FormData();
+    body.append('file', file);
+    return ClaimCaseSchema.parse(
+      await request(
+        `/api/cases/${encodeURIComponent(id)}/uploads?type=${encodeURIComponent(type)}`,
+        { method: 'POST', body },
+      ),
+    );
+  },
   async list(): Promise<ClaimCase[]> {
     const body = await request('/api/cases');
     if (!Array.isArray(body)) throw new Error('The API returned an invalid case list.');

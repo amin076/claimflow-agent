@@ -1,3 +1,4 @@
+import { ApiError } from './errors.js';
 import { randomUUID } from 'node:crypto';
 import {
   ClaimCaseSchema,
@@ -7,6 +8,7 @@ import {
   type ClaimCase,
   type CreateCaseInput,
   type ReviewCaseInput,
+  type SourceDocument,
   createDemoCase,
 } from '@claimflow/domain';
 
@@ -14,11 +16,9 @@ const cloneCase = (claim: ClaimCase): ClaimCase => ClaimCaseSchema.parse(structu
 
 export class InMemoryCaseRepository {
   readonly #cases = new Map<string, ClaimCase>();
-  #referenceSequence = 2;
 
-  constructor() {
-    const demo = createDemoCase();
-    this.#cases.set(demo.id, demo);
+  constructor(initial: ClaimCase[] = [createDemoCase()]) {
+    for (const claim of initial) this.#cases.set(claim.id, cloneCase(claim));
   }
 
   list(): ClaimCase[] {
@@ -35,9 +35,7 @@ export class InMemoryCaseRepository {
   create(input: CreateCaseInput): ClaimCase {
     const timestamp = new Date().toISOString();
     const id = `case-${randomUUID()}`;
-    const reference =
-      input.reference ??
-      `CF-${new Date().getUTCFullYear()}-${String(this.#referenceSequence++).padStart(3, '0')}`;
+    const reference = input.reference ?? `CF-${new Date().getUTCFullYear()}-${randomUUID()}`;
     const claim = ClaimCaseSchema.parse({
       id,
       reference,
@@ -61,7 +59,7 @@ export class InMemoryCaseRepository {
           outcome: 'SUCCESS',
           inputReferences: [],
           outputReferences: [id],
-          summary: 'Created a local synthetic case.',
+          summary: 'Created a synthetic case.',
         },
       ],
     });
@@ -70,21 +68,29 @@ export class InMemoryCaseRepository {
     return cloneCase(claim);
   }
 
-  addDocument(caseId: string, input: AddDocumentInput): ClaimCase | undefined {
+  addDocument(
+    caseId: string,
+    input: AddDocumentInput,
+    stored?: SourceDocument,
+  ): ClaimCase | undefined {
     const claim = this.#cases.get(caseId);
     if (!claim) return undefined;
 
+    if (claim.status !== 'DRAFT')
+      throw new ApiError(409, 'CASE_NOT_DRAFT', 'Create a draft case for a new upload.');
     const timestamp = new Date().toISOString();
-    const document = SourceDocumentSchema.parse({
-      id: `doc-${randomUUID()}`,
-      caseId,
-      filename: input.filename,
-      mimeType: input.mimeType,
-      type: input.type,
-      storageUri: `local://uploads/${caseId}/${input.filename}`,
-      uploadedAt: timestamp,
-      quality: { score: 1, usable: true, issues: [], notes: [] },
-    });
+    const document =
+      stored ??
+      SourceDocumentSchema.parse({
+        id: `doc-${randomUUID()}`,
+        caseId,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        type: input.type,
+        storageUri: `local://uploads/${caseId}/${input.filename}`,
+        uploadedAt: timestamp,
+        quality: { score: 1, usable: true, issues: [], notes: [] },
+      });
 
     const updated = ClaimCaseSchema.parse({
       ...claim,

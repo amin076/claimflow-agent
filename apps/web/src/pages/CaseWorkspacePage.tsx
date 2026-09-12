@@ -30,6 +30,7 @@ export const CaseWorkspacePage = () => {
   const [cases, setCases] = useState<ClaimCase[]>([]);
   const [selected, setSelected] = useState<ClaimCase>();
   const [documentType, setDocumentType] = useState<DocumentType>('CLAIM_FORM');
+  const [uploadFile, setUploadFile] = useState<File>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -100,7 +101,7 @@ export const CaseWorkspacePage = () => {
             Human review workspace
           </Typography>
           <Typography variant="h6" color="text.secondary" sx={{ mt: 1, maxWidth: 820 }}>
-            Create a synthetic case, register a document, run deterministic extraction, and review
+            Create a synthetic case, upload a document, run deterministic extraction, and review
             every uncertain result with its source evidence.
           </Typography>
         </Box>
@@ -119,7 +120,7 @@ export const CaseWorkspacePage = () => {
         {loading ? (
           <Stack direction="row" spacing={2} sx={{ alignItems: 'center', py: 8 }}>
             <CircularProgress />
-            <Typography>Loading local cases…</Typography>
+            <Typography>Loading cases…</Typography>
           </Stack>
         ) : (
           <Box
@@ -145,10 +146,11 @@ export const CaseWorkspacePage = () => {
                   <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
                     <Stack spacing={2}>
                       <Typography variant="h6" component="h3" sx={{ fontWeight: 750 }}>
-                        1. Register a synthetic document
+                        1. Upload a synthetic document
                       </Typography>
                       <Alert severity="warning">
-                        Metadata-only local prototype. Select no real customer document.
+                        Synthetic PDF, JPEG or PNG only, up to 5 MiB. Mock extraction returns demo
+                        values; it does not read the uploaded file.
                       </Alert>
                       <FormControl fullWidth>
                         <InputLabel id="document-type-label">Document type</InputLabel>
@@ -166,22 +168,30 @@ export const CaseWorkspacePage = () => {
                           <MenuItem value="OTHER">Other</MenuItem>
                         </Select>
                       </FormControl>
+                      <Button variant="outlined" component="label" disabled={busy}>
+                        Choose synthetic file
+                        <input
+                          hidden
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png"
+                          onChange={(event) => setUploadFile(event.target.files?.[0])}
+                        />
+                      </Button>
+                      <Typography variant="body2">
+                        {uploadFile?.name ?? 'No file selected'}
+                      </Typography>
                       <Button
                         variant="contained"
-                        disabled={busy || selected.documents.length > 0}
-                        onClick={() =>
-                          run(
-                            () =>
-                              caseApi.addDocument(selected.id, {
-                                filename: `synthetic-${documentType.toLowerCase().replaceAll('_', '-')}.jpg`,
-                                mimeType: 'image/jpeg',
-                                type: documentType,
-                              }),
-                            'Synthetic document metadata registered.',
-                          )
-                        }
+                        disabled={busy || !uploadFile}
+                        onClick={() => {
+                          if (uploadFile)
+                            void run(
+                              () => caseApi.upload(selected.id, uploadFile, documentType),
+                              'Synthetic file uploaded.',
+                            );
+                        }}
                       >
-                        Register synthetic document
+                        Upload synthetic document
                       </Button>
                     </Stack>
                   </Paper>
@@ -193,8 +203,8 @@ export const CaseWorkspacePage = () => {
                         2. Process case
                       </Typography>
                       <Typography color="text.secondary">
-                        Run deterministic mock extraction and validation. No AI or Cloud call is
-                        made.
+                        Run deterministic mock extraction and validation. No AI model is called.
+                        These are demo results, not facts extracted from your upload.
                       </Typography>
                       <Button
                         variant="contained"
@@ -210,6 +220,26 @@ export const CaseWorkspacePage = () => {
                         {busy ? 'Processing…' : 'Run mock processing'}
                       </Button>
                     </Stack>
+                  </Paper>
+                )}
+                {selected.documents.length > 0 && (
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="h6">Source documents</Typography>
+                    {selected.documents.map((document) => (
+                      <Box key={document.id} sx={{ mt: 1 }}>
+                        <Typography variant="body2">{document.filename}</Typography>
+                        {document.storageUri.endsWith(`/documents/${document.id}/original`) ? (
+                          <Button
+                            component="a"
+                            href={`/api/cases/${encodeURIComponent(selected.id)}/documents/${encodeURIComponent(document.id)}/content`}
+                          >
+                            Download original
+                          </Button>
+                        ) : (
+                          <Typography variant="caption">Demo metadata; no file attached</Typography>
+                        )}
+                      </Box>
+                    ))}
                   </Paper>
                 )}
                 <ExtractedFieldList

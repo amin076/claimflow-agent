@@ -164,11 +164,13 @@ Use deterministic mock extraction first. This proves the data model, API contrac
 
 ### Phase 4 — Google Cloud foundation
 
+**Status: deployment implementation ready; live deployment verification pending.** Foundation resources were reported created by Amin. See [deployment guide](./cloud-deployment.md).
+
 Use Google Cloud project `claimflow-ai-agents` and enable only the required services:
 
 - Cloud Run;
 - Artifact Registry;
-- Vertex AI;
+- Vertex AI (defer activation to Phase 6);
 - Firestore;
 - Cloud Storage;
 - Secret Manager;
@@ -189,6 +191,8 @@ Use least-privilege IAM. Developers use their own Google identities; credentials
 
 ### Phase 5 — Cloud Storage and Firestore
 
+**Status: adapters and upload UI implemented; live persistence exit gate pending.** Firestore transactions, private original-file storage, same-origin UI and CI verification are implemented.
+
 Use Cloud Storage for original uploads and generated file artifacts. Use Firestore for case metadata, fields, issues, processing state, reviews, and audit events.
 
 Keep a cloud-independent developer mode:
@@ -204,7 +208,7 @@ Cloud mode uses:
 ```env
 STORAGE_MODE=gcs
 DATABASE_MODE=firestore
-AI_MODE=vertex
+AI_MODE=mock
 GOOGLE_CLOUD_PROJECT=claimflow-ai-agents
 ```
 

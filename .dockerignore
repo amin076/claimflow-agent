@@ -1,0 +1,13 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.env
+.env.*
+*.key
+*.pem
+**/service-account*.json
+uploads
+coverage
+sample-data/private

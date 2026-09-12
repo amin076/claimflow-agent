@@ -10,3 +10,9 @@ try {
   app.log.error(error);
   process.exitCode = 1;
 }
+
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.once(signal, () => {
+    void app.close();
+  });
+}
