@@ -1,0 +1,14 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.env
+.env.*
+**/*.key
+**/*.pem
+**/service-account*.json
+uploads
+sample-data/private

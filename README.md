@@ -319,3 +319,12 @@ Use focused branches and pull requests. Do not push product implementation direc
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+## Phases 4–5: cloud adapters and deployment
+
+Actual synthetic PDF/image upload and private download, Firestore transactions, GCS/local file adapters, and a combined React/API container are implemented. Live deployment and cloud persistence verification are pending. AI remains mock.
+
+- [Deployment and verification](docs/cloud-deployment.md)
+- [راهنمای فارسی](docs/cloud-deployment.fa.md)
+
+The roadmap continues through Phase 12; Phases 6–8 cover Gemini extraction, ADK orchestration, and deterministic validation with human review.

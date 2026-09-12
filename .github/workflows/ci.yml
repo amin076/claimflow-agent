@@ -26,3 +26,47 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: cloud-firestore-emulator
+      - run: npm ci
+      - name: Start isolated Firestore emulator
+        run: |
+          gcloud emulators firestore start --host-port=127.0.0.1:8089 --project=claimflow-test --quiet > /tmp/firestore.log 2>&1 &
+          node --input-type=module -e 'for(let i=0;i<60;i++){try{await fetch("http://127.0.0.1:8089");process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)'
+      - run: npm test -- apps/api/src/firestore.integration.test.ts
+        env:
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8089
+      - if: failure()
+        run: cat /tmp/firestore.log
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: docker build -t claimflow-ci .
+      - name: Run packaged app without cloud credentials
+        run: |
+          docker run -d --name claimflow-ci -p 8080:8080 -e NODE_ENV=development -e UPLOAD_DIR=/tmp/uploads claimflow-ci
+          node --input-type=module -e 'for(let i=0;i<30;i++){try{const r=await fetch("http://localhost:8080/health");if(r.ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)'
+          node scripts/smoke.mjs http://localhost:8080
+      - if: always()
+        run: docker logs claimflow-ci
