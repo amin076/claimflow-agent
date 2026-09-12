@@ -24,6 +24,7 @@ import { IssueList } from '../components/IssueList.js';
 import { NewCaseForm } from '../components/NewCaseForm.js';
 import { AgentRunList } from '../components/AgentRunList.js';
 import { MissingFieldForm } from '../components/MissingFieldForm.js';
+import { FileDropzone } from '../components/FileDropzone.js';
 import { caseApi, type RuntimeInfo } from '../services/caseApi.js';
 
 const errorMessage = (cause: unknown) =>
@@ -244,18 +245,11 @@ export const CaseWorkspacePage = () => {
                           <MenuItem value="OTHER">Other</MenuItem>
                         </Select>
                       </FormControl>
-                      <Button variant="outlined" component="label" disabled={busy}>
-                        Choose synthetic file
-                        <input
-                          hidden
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png"
-                          onChange={(event) => setUploadFile(event.target.files?.[0])}
-                        />
-                      </Button>
-                      <Typography variant="body2">
-                        {uploadFile?.name ?? 'No file selected'}
-                      </Typography>
+                      <FileDropzone
+                        file={uploadFile}
+                        onFileSelect={setUploadFile}
+                        disabled={busy}
+                      />
                       <Button
                         variant="contained"
                         disabled={
