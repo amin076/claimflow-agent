@@ -103,9 +103,7 @@ export function sanitizeVertexJsonSchema(schema: unknown): unknown {
   return sanitized;
 }
 
-export const responseJsonSchema = sanitizeVertexJsonSchema(
-  z.toJSONSchema(ModelExtractionSchema),
-);
+export const responseJsonSchema = sanitizeVertexJsonSchema(z.toJSONSchema(ModelExtractionSchema));
 
 export function parseExtraction(text: string, pages: Map<string, number>): ModelExtraction {
   if (Buffer.byteLength(text) > 100_000) throw new Error('Model output exceeds limit');
