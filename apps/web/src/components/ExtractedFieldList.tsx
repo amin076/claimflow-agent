@@ -1,7 +1,9 @@
 import {
   Box,
   Button,
+  Chip,
   Divider,
+  InputAdornment,
   LinearProgress,
   Paper,
   Stack,
@@ -9,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import type { ClaimFieldName, ExtractedField } from '@claimflow/domain';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 type Props = {
   caseId: string;
@@ -22,20 +24,141 @@ type Props = {
   ) => Promise<void>;
 };
 
+type FilterCategory = 'ALL' | 'NEEDS_REVIEW' | 'ACCEPTED' | 'PROPOSED';
+
 export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) => {
   const [corrections, setCorrections] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>('ALL');
+
+  const needsReviewCount = useMemo(
+    () => fields.filter((f) => f.requiresReview || f.confidence < 0.8).length,
+    [fields],
+  );
+
+  const filteredFields = useMemo(() => {
+    return fields.filter((field) => {
+      // Category filter
+      if (activeFilter === 'NEEDS_REVIEW' && !(field.requiresReview || field.confidence < 0.8)) {
+        return false;
+      }
+      if (activeFilter === 'ACCEPTED' && field.status !== 'ACCEPTED') {
+        return false;
+      }
+      if (activeFilter === 'PROPOSED' && field.status !== 'PROPOSED') {
+        return false;
+      }
+
+      // Text search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesName = field.name.toLowerCase().includes(query);
+        const matchesValue = field.displayValue.toLowerCase().includes(query);
+        const matchesEvidence = field.evidence.some((ev) =>
+          ev.excerpt?.toLowerCase().includes(query),
+        );
+        return matchesName || matchesValue || matchesEvidence;
+      }
+
+      return true;
+    });
+  }, [fields, activeFilter, searchQuery]);
+
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-      <Typography variant="h6" component="h3" sx={{ fontWeight: 750, mb: 2 }}>
-        Extracted fields
-      </Typography>
+      <Stack spacing={2} sx={{ mb: 2 }}>
+        <Typography variant="h6" component="h3" sx={{ fontWeight: 750 }}>
+          Extracted fields
+        </Typography>
+
+        {fields.length > 0 && (
+          <Stack spacing={1.5}>
+            {/* Filter & Search Bar */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.5}
+              sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' } }}
+            >
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                <Chip
+                  label={`All (${fields.length})`}
+                  size="small"
+                  clickable
+                  color={activeFilter === 'ALL' ? 'primary' : 'default'}
+                  variant={activeFilter === 'ALL' ? 'filled' : 'outlined'}
+                  onClick={() => setActiveFilter('ALL')}
+                />
+                <Chip
+                  label={`Needs Review (${needsReviewCount})`}
+                  size="small"
+                  clickable
+                  color={activeFilter === 'NEEDS_REVIEW' ? 'warning' : 'default'}
+                  variant={activeFilter === 'NEEDS_REVIEW' ? 'filled' : 'outlined'}
+                  onClick={() => setActiveFilter('NEEDS_REVIEW')}
+                />
+                <Chip
+                  label="Accepted"
+                  size="small"
+                  clickable
+                  color={activeFilter === 'ACCEPTED' ? 'success' : 'default'}
+                  variant={activeFilter === 'ACCEPTED' ? 'filled' : 'outlined'}
+                  onClick={() => setActiveFilter('ACCEPTED')}
+                />
+                <Chip
+                  label="Proposed"
+                  size="small"
+                  clickable
+                  color={activeFilter === 'PROPOSED' ? 'info' : 'default'}
+                  variant={activeFilter === 'PROPOSED' ? 'filled' : 'outlined'}
+                  onClick={() => setActiveFilter('PROPOSED')}
+                />
+              </Box>
+
+              <TextField
+                size="small"
+                placeholder="Search fields or evidence…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ minWidth: { xs: '100%', sm: 220 } }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Box component="span" sx={{ fontSize: '0.9rem' }}>
+                          🔍
+                        </Box>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Stack>
+          </Stack>
+        )}
+      </Stack>
+
       {fields.length === 0 ? (
         <Typography color="text.secondary">
           Add a synthetic document and process this case to generate fields.
         </Typography>
+      ) : filteredFields.length === 0 ? (
+        <Box sx={{ py: 3, textAlign: 'center' }}>
+          <Typography color="text.secondary" sx={{ mb: 1 }}>
+            No extracted fields match your filter or search terms.
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => {
+              setActiveFilter('ALL');
+              setSearchQuery('');
+            }}
+          >
+            Reset filter and search
+          </Button>
+        </Box>
       ) : (
         <Stack spacing={2.5} divider={<Divider flexItem />}>
-          {fields.map((field) => {
+          {filteredFields.map((field) => {
             const percent = Math.round(field.confidence * 100);
             const correction = corrections[field.id] ?? field.displayValue;
             return (
