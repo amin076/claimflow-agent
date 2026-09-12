@@ -132,7 +132,9 @@ This project is intended for the **Forward: AI in Business Hackathon**:
 
 ### Project status
 
-**Active hackathon build.** Phase 1 provides the TypeScript workspace, React interface, Fastify API, shared domain/config packages, tests, and CI. Cloud and agent integrations are introduced in later phases.
+**Active hackathon build.** Phases 1 and 2 provide the TypeScript workspace, React
+interface, Fastify API, evidence-linked domain model, synthetic fixtures, tests,
+and CI. Cloud persistence and deployment are the next milestones.
 
 ## MVP acceptance criteria
 
@@ -150,27 +152,114 @@ See the [Roadmap](docs/roadmap.md) and [Demo Scenario](docs/demo-scenario.md).
 
 ## Local development
 
-Requirements: Node.js 22 or newer and npm.
+The local application does **not** require a Google Cloud account, `gcloud`,
+Firestore, or Gemini credentials. It uses local storage, an in-memory database,
+and mock AI settings by default.
 
-```bash
-npm install
-cp .env.example .env
+### Required versions
+
+| Tool       |   Team version | Notes                                                    |
+| ---------- | -------------: | -------------------------------------------------------- |
+| Git        | Current stable | Required to clone, pull, branch, and commit              |
+| Node.js    |  22.x or newer | CI uses Node.js 22; use Node.js 22 for identical results |
+| npm        |         11.9.0 | Pinned by `packageManager`; do not use Yarn              |
+| TypeScript |          6.0.3 | Installed locally by npm; do not install it globally     |
+
+Check your versions in PowerShell:
+
+```powershell
+git --version
+node --version
+npm --version
+```
+
+If npm is not `11.9.0`:
+
+```powershell
+npm install --global npm@11.9.0
+```
+
+Close and reopen PowerShell after installing or updating Node.js/npm so the
+updated programs are available on `PATH`.
+
+### First-time setup on Windows
+
+```powershell
+cd C:\Physics
+git clone https://github.com/amin076/claimflow-agent.git
+cd claimflow-agent
+git switch main
+git pull origin main
+npm ci
+Copy-Item .env.example .env
 npm run dev
 ```
 
-The web app runs at `http://localhost:5173` and proxies API requests to
-`http://localhost:8080`. The default local configuration uses in-memory,
-local, and mock adapters, so Google Cloud access is not required.
+`npm run dev` starts both applications:
 
-Quality commands:
+- Frontend: <http://localhost:5173>
+- Backend: <http://localhost:8080>
+- Health endpoint: <http://localhost:8080/health>
+- Synthetic case endpoint: <http://localhost:8080/api/cases/demo>
 
-```bash
+Open <http://localhost:5173> and select **Create demo case**. The page should
+display case `CF-2026-001`, extracted fields, confidence, evidence, and two
+open issues.
+
+### Run Frontend and Backend separately
+
+This is useful when diagnosing errors or working on only one application.
+
+Terminal 1:
+
+```powershell
+cd C:\Physics\claimflow-agent
+npm run dev:api
+```
+
+Terminal 2:
+
+```powershell
+cd C:\Physics\claimflow-agent
+npm run dev:web
+```
+
+Confirm the Backend from another PowerShell window:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/health
+Invoke-RestMethod http://localhost:8080/api/cases/demo
+```
+
+### Start work each day
+
+```powershell
+cd C:\Physics\claimflow-agent
+git switch main
+git pull origin main
+npm ci
+git switch -c feature/short-description
+npm run dev
+```
+
+Do not work directly on `main`. If your branch already exists, replace the
+`git switch -c` command with `git switch your-branch-name`.
+
+### Quality checks before a Pull Request
+
+```powershell
 npm run format:check
 npm run lint
 npm run typecheck
 npm test
 npm run build
 ```
+
+All checks must pass before merging. GitHub Actions repeats the same checks.
+
+For complete setup, daily workflow, troubleshooting, and Google Cloud
+boundaries, see the [Local Development Guide](docs/local-development.md) or its
+[Farsi version](docs/local-development.fa.md).
 
 ## Repository map
 
@@ -192,6 +281,8 @@ npm run build
 │   ├── demo-scenario.md
 │   ├── human-review-policy.md
 │   ├── judging-strategy.md
+│   ├── local-development.md
+│   ├── local-development.fa.md
 │   ├── problem-statement.md
 │   ├── product-vision.md
 │   ├── roadmap.md

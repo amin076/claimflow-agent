@@ -40,3 +40,10 @@ If Behzad's strengths are primarily business or presentation, frontend ownership
 - no secrets or real customer data;
 - conflicts resolved by the MVP acceptance criteria and demo reliability;
 - every blocked task gets a cut, fallback, or explicit deadline.
+
+## Developer onboarding
+
+Every contributor must complete the
+[Local Development Guide](local-development.md), run both applications, verify
+the health and demo-case endpoints, and pass the local quality checks before
+starting an implementation issue.
