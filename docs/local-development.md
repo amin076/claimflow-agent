@@ -44,12 +44,14 @@ Close and reopen PowerShell after installing or updating Node.js/npm so the upda
 
 ## First-time setup on Windows
 
-Choose a normal development directory. The examples use `C:\Physics`.
+Open PowerShell in whichever parent folder you want to use for development. You
+can do this in File Explorer by opening the folder, right-clicking its empty
+space, and selecting **Open in Terminal**. The repository commands do not assume
+any personal drive, username, or folder structure.
 
 ```powershell
-cd C:\Physics
 git clone https://github.com/amin076/claimflow-agent.git
-cd claimflow-agent
+Set-Location claimflow-agent
 git switch main
 git pull origin main
 npm ci
@@ -98,17 +100,15 @@ This command starts both workspaces and is the normal development command.
 
 Separate terminals make logs easier to read and let contributors restart one application without stopping the other.
 
-Terminal 1 — Backend:
+Open Terminal 1 in the cloned `claimflow-agent` repository — Backend:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:api
 ```
 
-Terminal 2 — Frontend:
+Open Terminal 2 in the same repository — Frontend:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:web
 ```
 
@@ -137,14 +137,13 @@ NODE_ENV=development
 
 The Google Cloud project and location variables reserve the intended deployment configuration, but local/mock mode does not authenticate or call those services.
 
-Never commit `.env`, Application Default Credentials, service-account JSON files, API keys, or real customer documents. Never send Amin's credentials to another contributor. Cloud access will use each person's own approved identity and least-privilege IAM role in a later phase.
+Never commit `.env`, Application Default Credentials, service-account JSON files, API keys, or real customer documents. Never share one developer's credentials with another contributor. Cloud access will use each person's own approved identity and least-privilege IAM role in a later phase.
 
 ## Daily Git workflow
 
-Before beginning new work:
+Before beginning new work, open PowerShell in the cloned repository:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 git switch main
 git pull origin main
 npm ci
@@ -195,7 +194,6 @@ Changes to shared schemas can affect both applications, so run the full quality 
 The Frontend is running but cannot reach the Backend on port 8080. Start the Backend in a separate PowerShell window:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:api
 ```
 

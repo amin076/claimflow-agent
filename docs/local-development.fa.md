@@ -44,12 +44,14 @@ npm install --global npm@11.9.0
 
 ## نصب و اجرای اولین‌بار روی Windows
 
-در مثال زیر پروژه داخل `C:\Physics` قرار می‌گیرد:
+PowerShell را در هر پوشه‌ای که خودتان برای پروژه‌های توسعه انتخاب کرده‌اید باز
+کنید. در File Explorer می‌توانید پوشه را باز کنید، روی فضای خالی راست‌کلیک کنید و
+**Open in Terminal** را بزنید. این دستورها هیچ drive، نام کاربری یا پوشه شخصی خاصی
+را فرض نمی‌کنند.
 
 ```powershell
-cd C:\Physics
 git clone https://github.com/amin076/claimflow-agent.git
-cd claimflow-agent
+Set-Location claimflow-agent
 git switch main
 git pull origin main
 npm ci
@@ -82,17 +84,15 @@ npm run dev
 
 این روش برای دیدن logها و عیب‌یابی بهتر است.
 
-PowerShell اول — بک‌اند:
+PowerShell اول را داخل repository کلون‌شده `claimflow-agent` باز کنید — بک‌اند:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:api
 ```
 
-PowerShell دوم — فرانت‌اند:
+PowerShell دوم را داخل همان repository باز کنید — فرانت‌اند:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:web
 ```
 
@@ -121,14 +121,13 @@ NODE_ENV=development
 
 متغیرهای نام پروژه و location گوگل برای deployment آینده آماده شده‌اند؛ ولی حالت local/mock به سرویس‌های Google Cloud متصل نمی‌شود.
 
-فایل `.env`، Application Default Credentials، فایل JSON مربوط به Service Account، API key و مدارک واقعی مشتری را هرگز commit نکنید. credential امین نباید برای بهزاد ارسال یا کپی شود. در فاز Cloud، هر نفر با هویت Google خودش و فقط IAM roleهای لازم وارد پروژه می‌شود.
+فایل `.env`، Application Default Credentials، فایل JSON مربوط به Service Account، API key و مدارک واقعی مشتری را هرگز commit نکنید. credential یک توسعه‌دهنده نباید برای عضو دیگری ارسال یا کپی شود. در فاز Cloud، هر نفر با هویت Google خودش و فقط IAM roleهای لازم وارد پروژه می‌شود.
 
 ## روال روزانه Git
 
-قبل از شروع یک کار جدید:
+قبل از شروع یک کار جدید، PowerShell را داخل repository کلون‌شده باز کنید:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 git switch main
 git pull origin main
 npm ci
@@ -179,7 +178,6 @@ npm run build
 این خطا معمولاً یعنی فرانت‌اند اجرا شده ولی به بک‌اند روی port 8080 دسترسی ندارد. در PowerShell جداگانه بک‌اند را اجرا کنید:
 
 ```powershell
-cd C:\Physics\claimflow-agent
 npm run dev:api
 ```
 
