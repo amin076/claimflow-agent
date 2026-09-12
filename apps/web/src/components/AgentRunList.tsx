@@ -20,10 +20,16 @@ const STEP_DEFINITIONS: { name: AgentName; label: string; description: string }[
   { name: 'EXTRACTION', label: '3. Extraction', description: 'Gemini multimodal extraction' },
   { name: 'VALIDATION', label: '4. Rule Validation', description: 'Deterministic & date checks' },
   { name: 'CASE_PLANNER', label: '5. Case Planner', description: 'Synthesize case plan & actions' },
-  { name: 'REVIEW_ROUTER', label: '6. Review Router', description: 'Determine human review routing' },
+  {
+    name: 'REVIEW_ROUTER',
+    label: '6. Review Router',
+    description: 'Determine human review routing',
+  },
 ];
 
-const getStatusColor = (status: AgentRun['status']): 'success' | 'info' | 'error' | 'warning' | 'default' => {
+const getStatusColor = (
+  status: AgentRun['status'],
+): 'success' | 'info' | 'error' | 'warning' | 'default' => {
   switch (status) {
     case 'SUCCEEDED':
       return 'success';
@@ -81,13 +87,26 @@ export function AgentRunList({ runs }: { runs: AgentRun[] }) {
 
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
             {activeModel && (
-              <Chip label={`Model: ${activeModel}`} size="small" variant="outlined" color="primary" />
+              <Chip
+                label={`Model: ${activeModel}`}
+                size="small"
+                variant="outlined"
+                color="primary"
+              />
             )}
             {totalTokens > 0 && (
-              <Chip label={`${totalTokens.toLocaleString()} tokens`} size="small" variant="outlined" />
+              <Chip
+                label={`${totalTokens.toLocaleString()} tokens`}
+                size="small"
+                variant="outlined"
+              />
             )}
             {totalDurationMs > 0 && (
-              <Chip label={`${(totalDurationMs / 1000).toFixed(2)}s`} size="small" variant="outlined" />
+              <Chip
+                label={`${(totalDurationMs / 1000).toFixed(2)}s`}
+                size="small"
+                variant="outlined"
+              />
             )}
           </Stack>
         </Stack>
@@ -114,7 +133,11 @@ export function AgentRunList({ runs }: { runs: AgentRun[] }) {
                   error={isFailed}
                   optional={
                     run ? (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
                         {isRunning
                           ? 'Executing…'
                           : run.durationMs !== undefined

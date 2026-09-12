@@ -35,7 +35,9 @@ export const FileDropzone = ({
         return;
       }
       if (maxSizeBytes && selectedFile.size > maxSizeBytes) {
-        setSizeError(`File size (${formatBytes(selectedFile.size)}) exceeds the maximum allowed limit of ${formatBytes(maxSizeBytes)}.`);
+        setSizeError(
+          `File size (${formatBytes(selectedFile.size)}) exceeds the maximum allowed limit of ${formatBytes(maxSizeBytes)}.`,
+        );
         onFileSelect(undefined);
         return;
       }
@@ -134,12 +136,7 @@ export const FileDropzone = ({
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Chip
-                label="Selected"
-                color="success"
-                size="small"
-                variant="outlined"
-              />
+              <Chip label="Selected" color="success" size="small" variant="outlined" />
               <Button
                 size="small"
                 color="error"
@@ -154,11 +151,20 @@ export const FileDropzone = ({
             </Stack>
           </Stack>
         ) : (
-          <label htmlFor="synthetic-file-dropzone-input" style={{ cursor: disabled ? 'not-allowed' : 'pointer', width: '100%', display: 'block' }}>
+          <label
+            htmlFor="synthetic-file-dropzone-input"
+            style={{
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              width: '100%',
+              display: 'block',
+            }}
+          >
             <Stack spacing={1} sx={{ alignItems: 'center' }}>
               <Box sx={{ fontSize: '2.5rem', lineHeight: 1 }}>📁</Box>
               <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                {isDragging ? 'Drop synthetic document here' : 'Drag & drop synthetic document here'}
+                {isDragging
+                  ? 'Drop synthetic document here'
+                  : 'Drag & drop synthetic document here'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 or click to browse from your computer

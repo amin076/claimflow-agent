@@ -34,7 +34,11 @@ export const NewCaseForm = ({ busy, onCreate }: Props) => {
         </Alert>
 
         <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mb: 1, fontWeight: 600 }}
+          >
             Quick presets for live demo:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
