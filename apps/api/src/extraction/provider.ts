@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { Environment } from '@claimflow/config';
 import { responseJsonSchema, SYSTEM_INSTRUCTION } from './schema.js';
+import { reportProviderError } from './providerError.js';
 
 export interface ExtractionDocument {
   id: string;
@@ -37,28 +38,35 @@ export class VertexExtractionProvider implements ExtractionProvider {
     });
   }
   async generate(request: ExtractionRequest): Promise<ExtractionResponse> {
-    const response = await this.client.models.generateContent({
-      model: this.model,
-      contents: [
-        {
-          role: 'user',
-          parts: request.documents.flatMap((document) => [
-            { text: `Source documentId=${document.id}; pages=${document.pageCount}.` },
-            {
-              inlineData: { mimeType: document.mimeType, data: document.bytes.toString('base64') },
-            },
-          ]),
+    const response = await this.client.models
+      .generateContent({
+        model: this.model,
+        contents: [
+          {
+            role: 'user',
+            parts: request.documents.flatMap((document) => [
+              { text: `Source documentId=${document.id}; pages=${document.pageCount}.` },
+              {
+                inlineData: {
+                  mimeType: document.mimeType,
+                  data: document.bytes.toString('base64'),
+                },
+              },
+            ]),
+          },
+        ],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseJsonSchema,
+          maxOutputTokens: 8192,
+          candidateCount: 1,
+          abortSignal: request.signal,
         },
-      ],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        responseJsonSchema,
-        maxOutputTokens: 8192,
-        candidateCount: 1,
-        abortSignal: request.signal,
-      },
-    });
+      })
+      .catch((error: unknown) => {
+        throw reportProviderError(error);
+      });
     const candidate = response.candidates?.[0];
     return {
       text: response.text ?? '',
