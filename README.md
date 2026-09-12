@@ -2,13 +2,13 @@
 
 > Evidence-first agentic AI for turning messy business documents into structured, validated, actionable cases.
 
-[![Status](https://img.shields.io/badge/status-pre--build%20planning-blue)](#project-status)
+[![Status](https://img.shields.io/badge/status-active%20build-0c6f73)](#project-status)
 [![Hackathon](https://img.shields.io/badge/Forward-AI%20in%20Business-purple)](#hackathon-scope)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 ## Overview
 
-ClaimFlow AI is a planned agentic document-intelligence application for restoration, claims, field-service, and other document-heavy operations. It is designed to process mixed-quality inputs—emails, photographs, PDFs, invoices, reports, and handwritten forms—while preserving evidence, uncertainty, and human control.
+ClaimFlow AI is an agentic document-intelligence application for restoration, claims, field-service, and other document-heavy operations. It is designed to process mixed-quality inputs—emails, photographs, PDFs, invoices, reports, and handwritten forms—while preserving evidence, uncertainty, and human control.
 
 The system does more than transcribe text. It creates a traceable case record, compares facts across documents, identifies missing or conflicting information, and recommends the next operational action. Low-confidence or consequential decisions are routed to a human reviewer.
 
@@ -84,33 +84,33 @@ See [System Architecture](docs/architecture.md) and [Agent Architecture](docs/ag
 
 ## Planned agents
 
-| Agent | Responsibility | Must not do |
-|---|---|---|
-| Intake coordinator | Create the case and select the workflow | Make claim decisions |
-| Quality agent | Detect blur, cropping, rotation, and unreadable regions | Guess obscured content |
-| Extraction agent | Produce typed fields with confidence and evidence | Hide ambiguity |
-| Validation agent | Reconcile documents and identify conflicts | Override deterministic rules |
-| Case-planning agent | Summarise the case and recommend actions | Execute consequential actions |
-| Communication agent | Draft a message or voice interaction | Contact a person without approval |
+| Agent               | Responsibility                                          | Must not do                       |
+| ------------------- | ------------------------------------------------------- | --------------------------------- |
+| Intake coordinator  | Create the case and select the workflow                 | Make claim decisions              |
+| Quality agent       | Detect blur, cropping, rotation, and unreadable regions | Guess obscured content            |
+| Extraction agent    | Produce typed fields with confidence and evidence       | Hide ambiguity                    |
+| Validation agent    | Reconcile documents and identify conflicts              | Override deterministic rules      |
+| Case-planning agent | Summarise the case and recommend actions                | Execute consequential actions     |
+| Communication agent | Draft a message or voice interaction                    | Contact a person without approval |
 
 ## Planned technology
 
-| Layer | Technology |
-|---|---|
-| Web application | React, TypeScript, Vite, Material UI |
-| API | Node.js, TypeScript, Fastify |
-| Agent orchestration | Google Agent Development Kit (ADK) |
-| Multimodal reasoning | Gemini on Vertex AI |
-| Specialist OCR/forms | Google Document AI (stretch goal) |
-| Runtime validation | Zod plus deterministic TypeScript rules |
-| Case data | Firestore |
-| Original documents | Cloud Storage |
-| Deployment | Google Cloud Run |
-| Voice experience | ElevenLabs (stretch goal) |
-| Testing | Vitest |
-| Delivery | GitHub Actions |
+| Layer                | Technology                              |
+| -------------------- | --------------------------------------- |
+| Web application      | React, TypeScript, Vite, Material UI    |
+| API                  | Node.js, TypeScript, Fastify            |
+| Agent orchestration  | Google Agent Development Kit (ADK)      |
+| Multimodal reasoning | Gemini on Vertex AI                     |
+| Specialist OCR/forms | Google Document AI (stretch goal)       |
+| Runtime validation   | Zod plus deterministic TypeScript rules |
+| Case data            | Firestore                               |
+| Original documents   | Cloud Storage                           |
+| Deployment           | Google Cloud Run                        |
+| Voice experience     | ElevenLabs (stretch goal)               |
+| Testing              | Vitest                                  |
+| Delivery             | GitHub Actions                          |
 
-Technology choices remain provisional until the build begins and are evaluated against delivery time, cost, latency, and demo reliability.
+Technology choices are evaluated continuously against delivery time, cost, latency, and demo reliability.
 
 ## Planned user experience
 
@@ -132,7 +132,7 @@ This project is intended for the **Forward: AI in Business Hackathon**:
 
 ### Project status
 
-**Pre-build planning only.** This repository currently contains documentation, architecture, scope, and collaboration materials. Executable product development is scheduled to begin only when the hackathon officially starts.
+**Active hackathon build.** Phase 1 provides the TypeScript workspace, React interface, Fastify API, shared domain/config packages, tests, and CI. Cloud and agent integrations are introduced in later phases.
 
 ## MVP acceptance criteria
 
@@ -148,10 +148,40 @@ The MVP is complete when a reviewer can:
 
 See the [Roadmap](docs/roadmap.md) and [Demo Scenario](docs/demo-scenario.md).
 
+## Local development
+
+Requirements: Node.js 22 or newer and npm.
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+The web app runs at `http://localhost:5173` and proxies API requests to
+`http://localhost:8080`. The default local configuration uses in-memory,
+local, and mock adapters, so Google Cloud access is not required.
+
+Quality commands:
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
 ## Repository map
 
 ```text
 .
+├── apps/
+│   ├── api/
+│   └── web/
+├── packages/
+│   ├── config/
+│   └── domain/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── LICENSE
@@ -165,18 +195,18 @@ See the [Roadmap](docs/roadmap.md) and [Demo Scenario](docs/demo-scenario.md).
 │   ├── problem-statement.md
 │   ├── product-vision.md
 │   ├── roadmap.md
+│   ├── roadmap.fa.md
 │   ├── security-and-privacy.md
 │   └── team-responsibilities.md
 ├── sample-data/
 │   └── README.md
 └── .github/
+    ├── workflows/ci.yml
     ├── pull_request_template.md
     └── ISSUE_TEMPLATE/
         ├── bug.md
         └── feature.md
 ```
-
-Application source directories will be introduced after the official build starts.
 
 ## Team
 
