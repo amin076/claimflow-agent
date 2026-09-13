@@ -20,13 +20,21 @@ const normalized = (name: ClaimFieldName, value: string) =>
 
 const unique = (values: string[]) => [...new Set(values)];
 
-const sameDocumentScalarConflict = (name: ClaimFieldName, value: string, evidenceCount: number) => {
+const sameDocumentScalarConflict = (
+  name: ClaimFieldName,
+  value: string,
+  evidenceCount: number,
+) => {
   if (evidenceCount < 2) return [];
   if (name === 'incident.date') {
     return unique(value.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? []);
   }
   if (name === 'damage.estimatedAmount') {
-    return unique((value.match(/\b\d[\d,]*(?:\.\d{1,2})?\b/g) ?? []).map((amount) => amount.replace(/,/g, '')));
+    return unique(
+      (value.match(/\b\d[\d,]*(?:\.\d{1,2})?\b/g) ?? []).map((amount) =>
+        amount.replace(/,/g, ''),
+      ),
+    );
   }
   return [];
 };
@@ -40,7 +48,8 @@ export function materialize(result: ModelExtraction): ExtractedField[] {
     groups.set(field.name, [...(groups.get(field.name) ?? []), field]);
   return [...groups].map(([name, values]) => {
     const modelReasons = unique(values.flatMap((value) => value.uncertaintyReasons));
-    const crossRecordConflict = new Set(values.map((value) => normalized(name, value.value))).size > 1;
+    const crossRecordConflict =
+      new Set(values.map((value) => normalized(name, value.value))).size > 1;
     const intrinsicCandidates = unique(
       values.flatMap((value) =>
         sameDocumentScalarConflict(name, value.value, value.evidence.length),
