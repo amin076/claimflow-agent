@@ -13,6 +13,7 @@ coverage/
 *.key
 *.pem
 service-account*.json
+gha-creds-*.json
 
 # Local tooling
 .DS_Store
