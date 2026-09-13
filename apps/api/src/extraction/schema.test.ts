@@ -175,12 +175,12 @@ describe('safe model output diagnostics', () => {
     expect(error.message).not.toContain('2026-09-11');
   });
 
-  it('identifies evidence references outside the supplied document pages', () => {
+  it('identifies evidence references outside the supplied documents', () => {
     const error = diagnostic(
       JSON.stringify(
         output([
           field({
-            evidence: [{ documentId: 'doc-1', page: 6, excerpt: 'Claimant: Maya Rivera' }],
+            evidence: [{ documentId: 'unknown-doc', page: 1, excerpt: 'Claimant: Maya Rivera' }],
           }),
         ]),
       ),
