@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  ModelExtractionSchema,
-  responseJsonSchema,
-  sanitizeVertexJsonSchema,
-} from './schema.js';
+import { ModelExtractionSchema, responseJsonSchema, sanitizeVertexJsonSchema } from './schema.js';
 
 describe('Vertex response JSON schema', () => {
   it('removes unsupported JSON Schema keywords recursively', () => {
