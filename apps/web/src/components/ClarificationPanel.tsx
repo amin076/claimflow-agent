@@ -18,33 +18,58 @@ function RequestCard({
   const [question, setQuestion] = useState(item.question);
   const [value, setValue] = useState('');
   const [reason, setReason] = useState('');
+  const resolvedValue = claim.fields.find((field) => field.name === item.fieldName)?.displayValue;
+  const resolved = item.status === 'RESOLVED';
   return (
     <Paper variant="outlined" sx={{ p: 2 }} id={item.response?.id}>
       <Stack spacing={2}>
         <Typography variant="subtitle1">
           {item.fieldName} · {item.status}
         </Typography>
-        <Typography variant="body2">{item.context}</Typography>
-        {item.drafting?.failureClass && (
+        {resolved ? (
+          <Alert severity="success">
+            Resolved by human review{resolvedValue ? ` · canonical value: ${resolvedValue}` : ''}.
+            The original source conflict and clarification transcript remain attached as evidence.
+          </Alert>
+        ) : (
+          <Typography variant="body2">{item.context}</Typography>
+        )}
+        {item.drafting?.failureClass && !resolved && (
           <Alert severity="info">
             AI wording unavailable; safe template used. Review before approval.
           </Alert>
         )}
+        {item.drafting?.failureClass && resolved && (
+          <Typography variant="caption">
+            Original call used the safe template after optional AI wording was unavailable; the
+            reviewer approved the exact question before dialing.
+          </Typography>
+        )}
         {item.drafting?.source === 'GEMINI' && (
-          <Typography variant="caption">Gemini-assisted draft · human approval required</Typography>
+          <Typography variant="caption">
+            Gemini-assisted draft · human approval {resolved ? 'was required' : 'required'}
+          </Typography>
         )}
         {item.candidateValues.length > 0 && (
-          <Typography>Candidate values: {item.candidateValues.join(' / ')}</Typography>
+          <Typography>
+            {resolved ? 'Original candidate values' : 'Candidate values'}:{' '}
+            {item.candidateValues.join(' / ')}
+          </Typography>
         )}
         {claim.fields
           .find((field) => field.name === item.fieldName)
-          ?.evidence.map((evidence) => (
+          ?.evidence.filter((evidence) => evidence.documentId)
+          .map((evidence) => (
             <Typography key={evidence.id} variant="body2">
               Evidence {evidence.page ? `(page ${evidence.page})` : ''}: {evidence.excerpt}
             </Typography>
           ))}
         <TextField
-          label="Proposed clarification question"
+          label={
+            item.status === 'DRAFT'
+              ? 'Proposed clarification question'
+              : 'Approved clarification question'
+          }
           multiline
           value={question}
           disabled={item.status !== 'DRAFT' || busy}
@@ -112,9 +137,10 @@ function RequestCard({
             <Typography variant="subtitle2">
               Clarification evidence · received {item.response.receivedAt}
             </Typography>
-            <Alert severity="info">
-              Transcript is machine transcription, not a verified fact. Only a human correction
-              resolves this field.
+            <Alert severity={resolved ? 'success' : 'info'}>
+              {resolved
+                ? 'Transcript retained as supporting evidence. The field was resolved only after a human saved the canonical correction.'
+                : 'Transcript is machine transcription, not a verified fact. Only a human correction resolves this field.'}
             </Alert>
             {item.response.transcriptTruncated && (
               <Alert severity="warning">

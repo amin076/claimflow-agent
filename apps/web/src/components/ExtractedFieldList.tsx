@@ -160,7 +160,9 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
         <Stack spacing={2.5} divider={<Divider flexItem />}>
           {filteredFields.map((field) => {
             const percent = Math.round(field.confidence * 100);
-            const conflicted = hasConflict(field);
+            const historicalConflict = hasConflict(field);
+            const conflicted = historicalConflict && field.status !== 'CORRECTED';
+            const resolvedConflict = historicalConflict && field.status === 'CORRECTED';
             const correction = corrections[field.id] ?? (conflicted ? '' : field.displayValue);
             return (
               <Box key={field.id}>
@@ -179,6 +181,9 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                   >
                     <Typography sx={{ fontWeight: 750 }}>{field.name}</Typography>
                     {conflicted && <Chip label="Conflict detected" size="small" color="error" />}
+                    {resolvedConflict && (
+                      <Chip label="Resolved by human" size="small" color="success" />
+                    )}
                   </Stack>
                   <Typography color={field.requiresReview ? 'warning.main' : 'success.main'}>
                     {percent}% model estimate
@@ -219,11 +224,22 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                     </Box>
                   ))}
                 </Box>
-                {field.uncertaintyReasons.map((reason) => (
-                  <Typography key={reason} variant="body2" color="warning.dark" sx={{ mt: 1 }}>
-                    {reason}
+                {field.uncertaintyReasons
+                  .filter(
+                    (reason) =>
+                      !(resolvedConflict && reason.startsWith('Conflicting source values:')),
+                  )
+                  .map((reason) => (
+                    <Typography key={reason} variant="body2" color="warning.dark" sx={{ mt: 1 }}>
+                      {reason}
+                    </Typography>
+                  ))}
+                {resolvedConflict && (
+                  <Typography variant="body2" color="success.dark" sx={{ mt: 1, fontWeight: 700 }}>
+                    Original source conflict retained in the evidence history. The canonical value
+                    was resolved by human review.
                   </Typography>
-                ))}
+                )}
                 {conflicted && (
                   <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 700 }}>
                     Review the cited evidence and save one canonical value. Accepting the combined
