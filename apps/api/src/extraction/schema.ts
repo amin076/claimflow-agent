@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ClaimFieldNameSchema } from '@claimflow/domain';
 
-export const PROMPT_VERSION = 'claimflow-extraction-v1';
+export const PROMPT_VERSION = 'claimflow-extraction-v2';
 export const ModelExtractionSchema = z.strictObject({
   fields: z
     .array(
