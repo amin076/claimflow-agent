@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -70,3 +71,73 @@ jobs:
           node scripts/smoke.mjs http://localhost:8080
       - if: always()
         run: docker logs claimflow-ci
+
+  deploy:
+    name: deploy-cloud-run
+    needs: [quality, firestore, container]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
+      vars.GCP_DEPLOY_SERVICE_ACCOUNT != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: claimflow-production-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        name: Authenticate to Google Cloud with GitHub OIDC
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: claimflow-ai-agents
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - id: deploy
+        name: Build from source and deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: claimflow-ai-agents
+          region: australia-southeast1
+          service: claimflow-api
+          source: .
+          env_vars_update_strategy: overwrite
+          env_vars: |-
+            NODE_ENV=production
+            SERVE_WEB=true
+            DATABASE_MODE=firestore
+            STORAGE_MODE=gcs
+            AI_MODE=vertex
+            GEMINI_MODEL=gemini-3.5-flash
+            VERTEX_LOCATION=global
+            GOOGLE_CLOUD_PROJECT=claimflow-ai-agents
+            GOOGLE_CLOUD_LOCATION=australia-southeast1
+            FIRESTORE_DATABASE_ID=(default)
+            DOCUMENT_BUCKET=claimflow-ai-agents-documents
+          flags: >-
+            --service-account=claimflow-api-runtime@claimflow-ai-agents.iam.gserviceaccount.com
+            --min-instances=0
+            --max-instances=1
+            --concurrency=4
+            --memory=1Gi
+            --cpu=1
+            --timeout=120
+            --port=8080
+
+      - name: Verify public production service
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/health"
+          curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/ready"
+          curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/" > /dev/null
+          echo "ClaimFlow deployed: $SERVICE_URL"
