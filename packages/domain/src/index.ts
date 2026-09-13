@@ -10,3 +10,5 @@ export * from './field.js';
 export * from './fixture.js';
 export * from './issue.js';
 export * from './review.js';
+
+export * from './clarification.js';

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ClarificationRequestSchema } from './clarification.js';
 import { AgentRunSchema } from './agent.js';
 import { AuditEventSchema } from './audit.js';
 import { CaseStatusSchema, IdentifierSchema, TimestampSchema } from './common.js';
@@ -26,6 +27,7 @@ export const ClaimCaseSchema = z
     agentRuns: z.array(AgentRunSchema),
     reviews: z.array(ReviewDecisionSchema),
     auditEvents: z.array(AuditEventSchema),
+    clarifications: z.array(ClarificationRequestSchema).max(10).optional(),
   })
   .superRefine((claim, context) => {
     const records = [
@@ -35,6 +37,7 @@ export const ClaimCaseSchema = z
       ...claim.agentRuns,
       ...claim.reviews,
       ...claim.auditEvents,
+      ...(claim.clarifications ?? []),
     ];
 
     for (const record of records) {
@@ -47,10 +50,30 @@ export const ClaimCaseSchema = z
       }
     }
 
+    for (const request of claim.clarifications ?? []) {
+      if (
+        request.response &&
+        (request.response.caseId !== claim.id ||
+          request.response.clarificationId !== request.id ||
+          request.response.externalConversationId !== request.externalConversationId)
+      ) {
+        context.addIssue({ code: 'custom', message: 'Clarification response identity mismatch.' });
+      }
+    }
+    const responseIds = new Set(
+      (claim.clarifications ?? []).flatMap((request) =>
+        request.response ? [request.response.id] : [],
+      ),
+    );
+    for (const field of claim.fields)
+      for (const evidence of field.evidence) {
+        if (evidence.clarificationResponseId && !responseIds.has(evidence.clarificationResponseId))
+          context.addIssue({ code: 'custom', message: 'Unknown clarification evidence.' });
+      }
     const documentIds = new Set(claim.documents.map((document) => document.id));
     for (const [fieldIndex, field] of claim.fields.entries()) {
       for (const [evidenceIndex, evidence] of field.evidence.entries()) {
-        if (!documentIds.has(evidence.documentId)) {
+        if (evidence.documentId && !documentIds.has(evidence.documentId)) {
           context.addIssue({
             code: 'custom',
             path: ['fields', fieldIndex, 'evidence', evidenceIndex, 'documentId'],

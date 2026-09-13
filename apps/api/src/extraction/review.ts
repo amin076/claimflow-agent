@@ -1,3 +1,4 @@
+import { currentIssue } from '../clarification/service.js';
 import { randomUUID } from 'node:crypto';
 import {
   ClaimCaseSchema,
@@ -19,10 +20,30 @@ export function applyHumanReview(claim: ClaimCase, input: ReviewCaseInput): Clai
   const timestamp = new Date().toISOString();
   const field = claim.fields.find((candidate) => candidate.name === input.fieldName);
   const fields = structuredClone(claim.fields);
+  const clarification = input.clarificationResponseId
+    ? claim.clarifications?.find((item) => item.response?.id === input.clarificationResponseId)
+    : undefined;
+  if (input.clarificationResponseId) {
+    if (
+      input.action !== 'CORRECT' ||
+      !clarification ||
+      clarification.status !== 'COMPLETED' ||
+      clarification.fieldName !== input.fieldName ||
+      !clarification.response?.transcript.some(
+        (turn) => turn.role === 'user' && turn.message.trim(),
+      )
+    )
+      throw new ApiError(
+        400,
+        'INVALID_CLARIFICATION_EVIDENCE',
+        'Choose a completed response for this field with a customer answer.',
+      );
+    currentIssue(claim, clarification, false);
+  }
   if (input.action === 'CORRECT') {
     if (input.correctedValue === null || String(input.correctedValue ?? '').trim() === '')
       throw new ApiError(400, 'VALUE_REQUIRED', 'Supply a non-empty correction.');
-    if (!field && !input.evidence)
+    if (!field && !input.evidence && !clarification)
       throw new ApiError(
         400,
         'EVIDENCE_REQUIRED',
@@ -33,9 +54,22 @@ export function applyHumanReview(claim: ClaimCase, input: ReviewCaseInput): Clai
       if (!source || input.evidence.page > (source.pageCount ?? 1))
         throw new ApiError(400, 'INVALID_EVIDENCE', 'Evidence must refer to a page in this case.');
     }
-    const evidence = input.evidence
-      ? [{ ...input.evidence, id: `evidence-${randomUUID()}` }]
-      : field!.evidence;
+    const evidence = clarification
+      ? [
+          ...(field?.evidence ?? []),
+          {
+            id: `evidence-${randomUUID()}`,
+            clarificationResponseId: clarification.response!.id,
+            excerpt: clarification
+              .response!.transcript.filter((turn) => turn.role === 'user')
+              .map((turn) => turn.message)
+              .join(' ')
+              .slice(0, 2000),
+          },
+        ]
+      : input.evidence
+        ? [{ ...input.evidence, id: `evidence-${randomUUID()}` }]
+        : field!.evidence;
     const corrected = {
       ...(field ?? {
         id: `field-${randomUUID()}`,
@@ -65,6 +99,9 @@ export function applyHumanReview(claim: ClaimCase, input: ReviewCaseInput): Clai
     ...(input.fieldName ? { fieldName: input.fieldName } : {}),
     ...(field ? { previousValue: field.value } : {}),
     ...(input.correctedValue !== undefined ? { correctedValue: input.correctedValue } : {}),
+    ...(input.clarificationResponseId
+      ? { clarificationResponseId: input.clarificationResponseId }
+      : {}),
     reason: input.reason,
     createdAt: timestamp,
   });
@@ -124,5 +161,28 @@ export function applyHumanReview(claim: ClaimCase, input: ReviewCaseInput): Clai
       },
     ],
   };
+  if (
+    clarification &&
+    !updated.issues.some(
+      (issue) => issue.status === 'OPEN' && issue.fieldNames.includes(clarification.fieldName),
+    )
+  ) {
+    const item = updated.clarifications!.find((item) => item.id === clarification.id)!;
+    item.status = 'RESOLVED';
+    item.updatedAt = timestamp;
+    item.resolvedByReviewId = decision.id;
+    updated.auditEvents.push({
+      id: `audit-${randomUUID()}`,
+      caseId: claim.id,
+      timestamp,
+      actorType: 'HUMAN',
+      actorId: input.reviewerId,
+      action: 'CLARIFICATION_RESOLVED',
+      outcome: 'SUCCESS',
+      inputReferences: [item.response!.id],
+      outputReferences: [decision.id],
+      summary: 'Human saved a canonical correction using clarification evidence.',
+    });
+  }
   return ClaimCaseSchema.parse(updated);
 }

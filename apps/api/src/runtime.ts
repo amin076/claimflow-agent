@@ -1,3 +1,4 @@
+import type { ClarificationVoiceProvider } from './clarification/provider.js';
 import { ExtractionService } from './extraction/service.js';
 import { VertexExtractionProvider } from './extraction/provider.js';
 import { MockExtractionProvider } from './extraction/mockProvider.js';
@@ -13,6 +14,7 @@ import {
 } from './documentStorage.js';
 
 export interface Runtime {
+  voiceProvider?: ClarificationVoiceProvider;
   environment: Environment;
   cases: CaseRepository;
   documents: DocumentStorage;

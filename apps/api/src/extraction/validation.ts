@@ -101,7 +101,9 @@ export function validateFields(claim: ClaimCase, now = new Date()): ValidationIs
         ...new Set(
           claim.fields
             .filter((field) => fieldNames.includes(field.name))
-            .flatMap((field) => field.evidence.map((e) => e.documentId)),
+            .flatMap((field) =>
+              field.evidence.flatMap((e) => (e.documentId ? [e.documentId] : [])),
+            ),
         ),
       ],
       createdAt: timestamp,

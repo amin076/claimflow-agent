@@ -19,6 +19,7 @@ export const ReviewCaseInputSchema = z
     reviewerId: IdentifierSchema,
     action: z.enum(['ACCEPT', 'CORRECT', 'REJECT', 'ESCALATE', 'REQUEST_INPUT']),
     fieldName: ClaimFieldNameSchema.optional(),
+    clarificationResponseId: IdentifierSchema.optional(),
     correctedValue: ExtractedValueSchema.optional(),
     evidence: z
       .object({

@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
 const EnvironmentSchema = z.object({
+  ELEVENLABS_API_KEY: z.string().min(1).optional(),
+  ELEVENLABS_AGENT_ID: z.string().min(1).optional(),
+  ELEVENLABS_PHONE_NUMBER_ID: z.string().min(1).optional(),
+  ELEVENLABS_WEBHOOK_SECRET: z.string().min(1).optional(),
+  CLARIFICATION_REVIEW_TOKEN: z.string().min(32).optional(),
+  CLARIFICATION_TEST_PHONE: z
+    .string()
+    .regex(/^\+[1-9]\d{7,14}$/)
+    .optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().default(8080),
