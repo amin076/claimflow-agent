@@ -5,7 +5,12 @@ import type { CaseRepository } from '../persistence.js';
 import { ApiError } from '../errors.js';
 import { documentKey, validateDocument, type DocumentStorage } from '../documentStorage.js';
 import type { ExtractionDocument, ExtractionProvider, ExtractionResponse } from './provider.js';
-import { parseExtraction, PROMPT_VERSION, type ModelExtraction } from './schema.js';
+import {
+  ModelOutputValidationError,
+  parseExtraction,
+  PROMPT_VERSION,
+  type ModelExtraction,
+} from './schema.js';
 import { materialize, planCase, validateFields } from './validation.js';
 import { runAdkWorkflow, STEPS, type StepName } from './adkWorkflow.js';
 
@@ -225,18 +230,24 @@ export class ExtractionService {
             throw new ApiError(
               422,
               'INVALID_MODEL_OUTPUT',
-              'The model blocked or truncated its response; no facts were accepted.',
+              'MODEL_RESPONSE_INCOMPLETE: The model blocked or truncated its response; no facts were accepted.',
             );
           try {
             result = parseExtraction(
               generated.text,
               new Map(sources.map((source) => [source.id, source.pageCount])),
             );
-          } catch {
+          } catch (error) {
+            if (error instanceof ModelOutputValidationError)
+              throw new ApiError(
+                422,
+                'INVALID_MODEL_OUTPUT',
+                `${error.diagnosticCode}: ${error.safeMessage} No facts were accepted.`,
+              );
             throw new ApiError(
               422,
               'INVALID_MODEL_OUTPUT',
-              'Model JSON or source references failed validation; no facts were accepted.',
+              'SCHEMA_VALIDATION_FAILED: Model JSON or source references failed validation; no facts were accepted.',
             );
           }
         } finally {
