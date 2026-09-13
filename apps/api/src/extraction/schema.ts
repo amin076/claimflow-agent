@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ClaimFieldNameSchema } from '@claimflow/domain';
 
-export const PROMPT_VERSION = 'claimflow-extraction-v2';
+export const PROMPT_VERSION = 'claimflow-extraction-v3';
 export const ModelExtractionSchema = z.strictObject({
   fields: z
     .array(
@@ -202,9 +202,11 @@ For every extracted field include a short verbatim supporting excerpt, its suppl
 Return separate records for the same field in different documents, preserving conflicts across documents.
 Within one source document, never emit duplicate records for the same field. If pages in one document conflict,
 return one record whose value concisely preserves the conflicting source values, cite up to three relevant excerpts/pages,
-and explain the conflict in uncertaintyReasons.
+and include an uncertaintyReasons entry beginning exactly with "Conflicting source values:" followed by the alternatives.
+For strict scalar fields such as incident.date and damage.estimatedAmount, preserving multiple conflicting values in the
+proposed value is allowed because deterministic validation will require a human to save one canonical correction.
 Each field record must cite evidence from only one document. Omit a field if there is no textual evidence.
-Use ISO YYYY-MM-DD for an unambiguous date. For ambiguity or conflict, preserve the original source text and explain it.
+Use ISO YYYY-MM-DD for an unambiguous date. For ambiguity or conflict, preserve the competing source values and mark the conflict as specified above.
 Confidence is your uncalibrated estimate, not a probability of correctness. Explain ambiguity in uncertaintyReasons.
 Put only fields absent or unreadable across ALL supplied sources in missingFields. If the document is unusable, set quality.usable=false and explain why.
 Required baseline fields: claimant.fullName, incident.date, incident.address, damage.description.
