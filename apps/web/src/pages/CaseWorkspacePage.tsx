@@ -9,12 +9,13 @@ import {
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Stack,
   Typography,
   TextField,
 } from '@mui/material';
 import type { ClaimCase, ClaimFieldName, DocumentType, ReviewCaseInput } from '@claimflow/domain';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell.js';
 import { AuditTimeline } from '../components/AuditTimeline.js';
 import { CaseList } from '../components/CaseList.js';
@@ -24,6 +25,7 @@ import { IssueList } from '../components/IssueList.js';
 import { NewCaseForm } from '../components/NewCaseForm.js';
 import { AgentRunList } from '../components/AgentRunList.js';
 import { MissingFieldForm } from '../components/MissingFieldForm.js';
+import { FileDropzone } from '../components/FileDropzone.js';
 import { caseApi, type RuntimeInfo } from '../services/caseApi.js';
 
 const errorMessage = (cause: unknown) =>
@@ -32,6 +34,8 @@ const errorMessage = (cause: unknown) =>
 export const CaseWorkspacePage = () => {
   const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfo>();
   const [reviewReason, setReviewReason] = useState('');
+  const [reviewReasonError, setReviewReasonError] = useState(false);
+  const reviewReasonRef = useRef<HTMLInputElement>(null);
   const [cases, setCases] = useState<ClaimCase[]>([]);
   const [selected, setSelected] = useState<ClaimCase>();
   const [documentType, setDocumentType] = useState<DocumentType>('CLAIM_FORM');
@@ -110,9 +114,13 @@ export const CaseWorkspacePage = () => {
   ) => {
     if (!selected) return;
     if (!reviewReason.trim()) {
-      setError('Enter a review reason before saving a decision.');
+      setReviewReasonError(true);
+      setError('Please enter a review reason below before saving a decision.');
+      reviewReasonRef.current?.focus();
+      reviewReasonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    setReviewReasonError(false);
     const labels: Record<ReviewCaseInput['action'], string> = {
       ACCEPT: 'Accepted by the local reviewer.',
       CORRECT: 'Correction saved with an audit event.',
@@ -244,18 +252,11 @@ export const CaseWorkspacePage = () => {
                           <MenuItem value="OTHER">Other</MenuItem>
                         </Select>
                       </FormControl>
-                      <Button variant="outlined" component="label" disabled={busy}>
-                        Choose synthetic file
-                        <input
-                          hidden
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png"
-                          onChange={(event) => setUploadFile(event.target.files?.[0])}
-                        />
-                      </Button>
-                      <Typography variant="body2">
-                        {uploadFile?.name ?? 'No file selected'}
-                      </Typography>
+                      <FileDropzone
+                        file={uploadFile}
+                        onFileSelect={setUploadFile}
+                        disabled={busy}
+                      />
                       <Button
                         variant="contained"
                         disabled={
@@ -339,12 +340,21 @@ export const CaseWorkspacePage = () => {
                 )}
                 {selected.status !== 'DRAFT' && (
                   <TextField
+                    inputRef={reviewReasonRef}
                     label="Reason for this review decision"
                     value={reviewReason}
-                    onChange={(event) => setReviewReason(event.target.value)}
+                    onChange={(event) => {
+                      setReviewReason(event.target.value);
+                      if (event.target.value.trim()) setReviewReasonError(false);
+                    }}
+                    error={reviewReasonError}
                     multiline
                     fullWidth
-                    helperText="Record what you checked against the source. Required for accept, correct, reject or routing."
+                    helperText={
+                      reviewReasonError
+                        ? 'A review reason is required before saving a decision.'
+                        : 'Record what you checked against the source. Required for accept, correct, reject or routing.'
+                    }
                   />
                 )}
                 <MissingFieldForm
@@ -378,6 +388,12 @@ export const CaseWorkspacePage = () => {
           </Box>
         )}
       </Stack>
+      <Snackbar
+        open={Boolean(notice)}
+        autoHideDuration={4000}
+        onClose={() => setNotice(undefined)}
+        message={notice}
+      />
     </AppShell>
   );
 };
