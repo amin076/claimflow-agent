@@ -26,6 +26,9 @@ type Props = {
 
 type FilterCategory = 'ALL' | 'NEEDS_REVIEW' | 'ACCEPTED' | 'PROPOSED';
 
+const hasConflict = (field: ExtractedField) =>
+  field.uncertaintyReasons.some((reason) => reason.startsWith('Conflicting source values:'));
+
 export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) => {
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +41,6 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
 
   const filteredFields = useMemo(() => {
     return fields.filter((field) => {
-      // Category filter
       if (activeFilter === 'NEEDS_REVIEW' && !(field.requiresReview || field.confidence < 0.8)) {
         return false;
       }
@@ -49,7 +51,6 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
         return false;
       }
 
-      // Text search query
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesName = field.name.toLowerCase().includes(query);
@@ -73,7 +74,6 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
 
         {fields.length > 0 && (
           <Stack spacing={1.5}>
-            {/* Filter & Search Bar */}
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={1.5}
@@ -160,11 +160,19 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
         <Stack spacing={2.5} divider={<Divider flexItem />}>
           {filteredFields.map((field) => {
             const percent = Math.round(field.confidence * 100);
-            const correction = corrections[field.id] ?? field.displayValue;
+            const conflicted = hasConflict(field);
+            const correction = corrections[field.id] ?? (conflicted ? '' : field.displayValue);
             return (
               <Box key={field.id}>
-                <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between' }}>
-                  <Typography sx={{ fontWeight: 750 }}>{field.name}</Typography>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography sx={{ fontWeight: 750 }}>{field.name}</Typography>
+                    {conflicted && <Chip label="Conflict detected" size="small" color="error" />}
+                  </Stack>
                   <Typography color={field.requiresReview ? 'warning.main' : 'success.main'}>
                     {percent}% model estimate
                   </Typography>
@@ -203,13 +211,19 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                     {reason}
                   </Typography>
                 ))}
+                {conflicted && (
+                  <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 700 }}>
+                    Review the cited evidence and save one canonical value. Accepting the combined AI value does not resolve this conflict.
+                  </Typography>
+                )}
                 {(field.requiresReview ||
                   field.status === 'PROPOSED' ||
                   field.status === 'REJECTED') && (
                   <Stack spacing={1.5} sx={{ mt: 2 }}>
                     <TextField
                       size="small"
-                      label="Corrected value"
+                      label={conflicted ? 'Resolved canonical value' : 'Corrected value'}
+                      placeholder={conflicted ? 'Enter one supported value after reviewing the evidence' : undefined}
                       value={correction}
                       onChange={(event) =>
                         setCorrections((current) => ({
@@ -223,7 +237,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                       <Button
                         variant="contained"
                         color="success"
-                        disabled={busy}
+                        disabled={busy || conflicted}
                         onClick={() => onReview('ACCEPT', field.name)}
                       >
                         Accept value
