@@ -17,33 +17,69 @@ const normalized = (name: ClaimFieldName, value: string) =>
   name === 'vehicle.registration'
     ? value.toUpperCase().replace(/[^A-Z0-9]/g, '')
     : value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const unique = (values: string[]) => [...new Set(values)];
+
+const sameDocumentScalarConflict = (name: ClaimFieldName, value: string, evidenceCount: number) => {
+  if (evidenceCount < 2) return [];
+  if (name === 'incident.date') {
+    return unique(value.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? []);
+  }
+  if (name === 'damage.estimatedAmount') {
+    return unique(
+      [...value.matchAll(/(?:AUD\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/gi)].map(
+        (match) => match[1]!.replace(/,/g, ''),
+      ),
+    );
+  }
+  return [];
+};
+
+const hasConflictMarker = (reasons: string[]) =>
+  reasons.some((reason) => reason.startsWith('Conflicting source values:'));
+
 export function materialize(result: ModelExtraction): ExtractedField[] {
   const groups = new Map<ClaimFieldName, ModelExtraction['fields']>();
   for (const field of result.fields)
     groups.set(field.name, [...(groups.get(field.name) ?? []), field]);
-  return [...groups].map(([name, values]) => ({
-    id: `field-${randomUUID()}`,
-    name,
-    value: values[0]!.value,
-    displayValue: values[0]!.value,
-    confidence: Math.min(...values.map((value) => value.confidence)),
-    status: 'PROPOSED',
-    requiresReview: true,
-    evidence: values.flatMap((value) =>
-      value.evidence.map((evidence) => ({ ...evidence, id: `evidence-${randomUUID()}` })),
-    ),
-    uncertaintyReasons: [
-      ...new Set(values.flatMap((value) => value.uncertaintyReasons)),
-      ...(new Set(values.map((value) => normalized(name, value.value))).size > 1
-        ? [
-            `Conflicting source values: ${values
-              .map((value) => value.value)
-              .join(' / ')
-              .slice(0, 1000)}`,
-          ]
+  return [...groups].map(([name, values]) => {
+    const modelReasons = unique(values.flatMap((value) => value.uncertaintyReasons));
+    const crossRecordConflict = new Set(values.map((value) => normalized(name, value.value))).size > 1;
+    const intrinsicCandidates = unique(
+      values.flatMap((value) =>
+        sameDocumentScalarConflict(name, value.value, value.evidence.length),
+      ),
+    );
+    const inferredConflict = intrinsicCandidates.length > 1;
+    const generatedConflictReason = crossRecordConflict
+      ? `Conflicting source values: ${values
+          .map((value) => value.value)
+          .join(' / ')
+          .slice(0, 1000)}`
+      : inferredConflict
+        ? `Conflicting source values: ${intrinsicCandidates.join(' / ').slice(0, 1000)}`
+        : undefined;
+    const uncertaintyReasons = [
+      ...modelReasons,
+      ...(generatedConflictReason && !hasConflictMarker(modelReasons)
+        ? [generatedConflictReason]
         : []),
-    ],
-  }));
+    ];
+
+    return {
+      id: `field-${randomUUID()}`,
+      name,
+      value: values[0]!.value,
+      displayValue: values[0]!.value,
+      confidence: Math.min(...values.map((value) => value.confidence)),
+      status: 'PROPOSED',
+      requiresReview: true,
+      evidence: values.flatMap((value) =>
+        value.evidence.map((evidence) => ({ ...evidence, id: `evidence-${randomUUID()}` })),
+      ),
+      uncertaintyReasons,
+    };
+  });
 }
 export function validateFields(claim: ClaimCase, now = new Date()): ValidationIssue[] {
   const timestamp = now.toISOString();
@@ -89,6 +125,8 @@ export function validateFields(claim: ClaimCase, now = new Date()): ValidationIs
       continue;
     }
     const value = String(field.value ?? '').trim();
+    const hasConflict = hasConflictMarker(field.uncertaintyReasons);
+    const unresolvedConflict = hasConflict && field.status !== 'CORRECTED';
     if (field.status === 'PROPOSED') {
       add(
         'BUSINESS_RULE',
@@ -103,25 +141,20 @@ export function validateFields(claim: ClaimCase, now = new Date()): ValidationIs
           [field.name],
           'WARNING',
         );
-      if (
-        field.uncertaintyReasons.some((reason) => reason.startsWith('Conflicting source values:'))
-      )
+      if (hasConflict)
         add(
           'CONTRADICTION',
-          `${field.name} differs across documents. Correct the value with a reason.`,
+          `${field.name} has conflicting source values. Review the cited evidence and save one canonical correction with a reason.`,
           [field.name],
         );
     }
-    if (
-      field.status === 'ACCEPTED' &&
-      field.uncertaintyReasons.some((reason) => reason.startsWith('Conflicting source values:'))
-    )
+    if (field.status === 'ACCEPTED' && hasConflict)
       add(
         'CONTRADICTION',
         `${field.name} requires a reasoned correction; acceptance alone does not resolve a conflict.`,
         [field.name],
       );
-    if (field.name === 'incident.date') {
+    if (field.name === 'incident.date' && !unresolvedConflict) {
       const parsed = new Date(`${value}T00:00:00.000Z`);
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
@@ -138,6 +171,7 @@ export function validateFields(claim: ClaimCase, now = new Date()): ValidationIs
       add('INVALID_FORMAT', 'Email format is invalid.', [field.name]);
     if (
       field.name === 'damage.estimatedAmount' &&
+      !unresolvedConflict &&
       (!/^\d+(\.\d{1,2})?$/.test(value) || !Number.isFinite(Number(value)))
     )
       add(
