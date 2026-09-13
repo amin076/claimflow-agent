@@ -89,10 +89,7 @@ export function sanitizeVertexJsonSchema(schema: unknown): unknown {
       continue;
     }
 
-    if (
-      (key === 'prefixItems' || key === 'anyOf' || key === 'oneOf') &&
-      Array.isArray(value)
-    ) {
+    if ((key === 'prefixItems' || key === 'anyOf' || key === 'oneOf') && Array.isArray(value)) {
       sanitized[key] = value.map((childSchema) => sanitizeVertexJsonSchema(childSchema));
       continue;
     }
