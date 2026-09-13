@@ -20,20 +20,14 @@ const normalized = (name: ClaimFieldName, value: string) =>
 
 const unique = (values: string[]) => [...new Set(values)];
 
-const sameDocumentScalarConflict = (
-  name: ClaimFieldName,
-  value: string,
-  evidenceCount: number,
-) => {
+const sameDocumentScalarConflict = (name: ClaimFieldName, value: string, evidenceCount: number) => {
   if (evidenceCount < 2) return [];
   if (name === 'incident.date') {
     return unique(value.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? []);
   }
   if (name === 'damage.estimatedAmount') {
     return unique(
-      (value.match(/\b\d[\d,]*(?:\.\d{1,2})?\b/g) ?? []).map((amount) =>
-        amount.replace(/,/g, ''),
-      ),
+      (value.match(/\b\d[\d,]*(?:\.\d{1,2})?\b/g) ?? []).map((amount) => amount.replace(/,/g, '')),
     );
   }
   return [];
