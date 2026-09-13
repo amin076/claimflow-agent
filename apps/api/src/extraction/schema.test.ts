@@ -1,41 +1,64 @@
 import { describe, expect, it } from 'vitest';
-import { ModelExtractionSchema, responseJsonSchema, sanitizeVertexJsonSchema } from './schema.js';
+import { ModelExtractionSchema, responseJsonSchema } from './schema.js';
 
 describe('Vertex response JSON schema', () => {
-  it('removes unsupported JSON Schema keywords recursively', () => {
-    expect(
-      sanitizeVertexJsonSchema({
-        type: 'object',
-        properties: {
-          value: {
-            type: 'string',
-            minLength: 1,
-            maxLength: 20,
-            pattern: '^safe$',
-          },
-        },
-        required: ['value'],
-        additionalProperties: false,
-      }),
-    ).toEqual({
+  it('uses a deliberately minimal shape-only generation schema', () => {
+    expect(responseJsonSchema).toEqual({
       type: 'object',
       properties: {
-        value: {
-          type: 'string',
+        fields: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              value: { type: 'string' },
+              confidence: { type: 'number' },
+              evidence: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    documentId: { type: 'string' },
+                    page: { type: 'integer' },
+                    excerpt: { type: 'string' },
+                  },
+                  required: ['documentId', 'page', 'excerpt'],
+                },
+              },
+              uncertaintyReasons: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+            required: ['name', 'value', 'confidence', 'evidence', 'uncertaintyReasons'],
+          },
+        },
+        missingFields: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        quality: {
+          type: 'object',
+          properties: {
+            usable: { type: 'boolean' },
+            notes: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+          required: ['usable', 'notes'],
         },
       },
-      required: ['value'],
-      additionalProperties: false,
+      required: ['fields', 'missingFields', 'quality'],
     });
   });
 
-  it('keeps supported constraints while omitting Zod string-length constraints', () => {
+  it('does not send domain constraints that contributed to Vertex schema complexity', () => {
     const serialized = JSON.stringify(responseJsonSchema);
-    expect(serialized).not.toMatch(/"minLength"|"maxLength"|"pattern"/);
-    expect(serialized).toContain('"minItems"');
-    expect(serialized).toContain('"maxItems"');
-    expect(serialized).toContain('"minimum"');
-    expect(serialized).toContain('"maximum"');
+    expect(serialized).not.toMatch(
+      /"enum"|"minLength"|"maxLength"|"minItems"|"maxItems"|"minimum"|"maximum"|"pattern"/,
+    );
   });
 
   it('still enforces full string constraints during server-side Zod validation', () => {
@@ -50,6 +73,33 @@ describe('Vertex response JSON schema', () => {
               documentId: 'doc-1',
               page: 1,
               excerpt: 'Synthetic claimant name',
+            },
+          ],
+          uncertaintyReasons: [],
+        },
+      ],
+      missingFields: [],
+      quality: {
+        usable: true,
+        notes: [],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('still rejects field names outside the ClaimFlow domain', () => {
+    const result = ModelExtractionSchema.safeParse({
+      fields: [
+        {
+          name: 'claim.approvalDecision',
+          value: 'APPROVE',
+          confidence: 1,
+          evidence: [
+            {
+              documentId: 'doc-1',
+              page: 1,
+              excerpt: 'Synthetic text',
             },
           ],
           uncertaintyReasons: [],
