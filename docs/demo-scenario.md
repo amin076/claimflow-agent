@@ -1,57 +1,83 @@
 # Demo Scenario
 
-## Synthetic case
+## Synthetic motor-claim case
 
-A restoration coordinator receives:
+The official hackathon demo uses a fully synthetic five-page motor-claim packet. It intentionally contains both consistent facts and conflicting facts so ClaimFlow can demonstrate evidence lineage, multimodal extraction, deterministic validation, human review, and auditability in one short flow.
 
-1. an email reporting possible water damage;
-2. a blurred photograph of a handwritten intake form;
-3. a property-damage photograph;
-4. an invoice with a case identifier that differs by one digit.
+The packet contains fictional claimant/contact details, incident information, vehicle information, damage notes, and estimate information. All people, addresses, identifiers, phone numbers, dates, and amounts are synthetic.
 
-All people, addresses, identifiers, and amounts are fictional.
+Two deliberate conflicts are important for the live demo:
 
-## Three-to-five-minute walkthrough
+- incident date: `2026-09-10` versus `2026-09-11`;
+- estimated damage amount: `AUD 4,860.00` versus `AUD 4,142.00`.
 
-### 0:00–0:30 — Problem
+## Recommended 2–3 minute walkthrough
 
-Show the fragmented inputs and explain why manual transcription and reconciliation are slow and risky.
+### 0:00–0:25 — Problem
 
-### 0:30–1:15 — Intake and quality
+Explain that claims and restoration teams receive facts across PDFs, photos, emails, notes, and forms. A plain OCR system can copy text, but it does not reliably show where each fact came from, surface contradictions, or know when a person must intervene.
 
-Upload the files. Show classification and a warning that the form is blurred/cropped.
+### 0:25–0:50 — Create and process the case
 
-### 1:15–2:15 — Evidence-linked extraction
+Create a new synthetic case, upload the five-page packet, and run **Extract with Gemini**. Point out that the backend executes the controlled ADK workflow and stores the originals separately from structured case data.
 
-Open the case workspace. Select extracted fields and highlight their source evidence and confidence.
+### 0:50–1:25 — Evidence-linked extraction
 
-### 2:15–3:00 — Agentic validation
+Show several correctly extracted fields such as claimant phone, incident address, vehicle information, and damage description. Open the source links and point to page-level evidence and model confidence.
 
-Show the identifier contradiction and missing incident date. Explain that deterministic checks and model reasoning work together.
+### 1:25–2:05 — Genuine conflict handling
 
-### 3:00–3:40 — Human review
+Scroll to `incident.date` and `damage.estimatedAmount`.
 
-Correct one field, reject another, and request clearer evidence. Show that the correction is recorded.
+Show that ClaimFlow:
 
-### 3:40–4:20 — Actionable outcome
+- preserves both conflicting source values;
+- displays **Conflict detected**;
+- creates a `CONTRADICTION` issue;
+- lowers confidence rather than silently choosing one value;
+- disables **Accept value** for the conflict;
+- requires a human to inspect the cited evidence and enter one canonical correction with a reason.
 
-Generate the case summary, priority suggestion, and next-action list.
+This is the central demo moment.
 
-### 4:20–5:00 — Optional voice feature
+### 2:05–2:35 — Human correction and auditability
 
-Preview an ElevenLabs voice request for missing information. Do not call a real person.
+Enter one supported canonical value, add the review reason, and save the correction. Show that deterministic rules recompute and that the audit timeline records the human decision and workflow stages.
+
+### 2:35–3:00 — Architecture and safety close
+
+Summarize the stack:
+
+`React → Fastify → Cloud Storage / Firestore → ADK → Gemini on Vertex AI → deterministic TypeScript rules → human review`
+
+Close with the safety boundary: ClaimFlow prepares evidence and a reviewable case; it does not approve or deny an insurance claim.
 
 ## Claims the demo can prove
 
-- working end-to-end processing;
-- evidence lineage;
-- uncertainty handling;
-- contradiction detection;
-- human correction and audit history.
+- deployed end-to-end processing on Google Cloud Run;
+- Gemini multimodal extraction on Vertex AI;
+- six-stage ADK workflow execution;
+- evidence lineage to source pages;
+- explicit model confidence and uncertainty;
+- deterministic contradiction and business-rule checks;
+- human correction with mandatory reason;
+- audit history and agent-run trace;
+- Firestore/Cloud Storage persistence;
+- automatic keyless GitHub Actions deployment using OIDC/WIF.
 
 ## Claims the demo must not make
 
-- perfect handwriting recognition;
+- perfect handwriting or OCR accuracy;
 - autonomous insurance decisions;
-- measured savings without a benchmark;
-- production security or compliance.
+- production compliance certification;
+- measured business savings without a benchmark;
+- general production accuracy beyond the tested synthetic scenarios;
+- Document AI integration (it was evaluated and deliberately deferred for the MVP).
+
+## Recording guidance
+
+- Record a clean fresh case rather than reusing a case that already contains review actions.
+- Keep the browser zoom so field name, value, evidence, and conflict badge are visible together.
+- Spend more time on the two conflicts than on ordinary fields.
+- Do not wait through unnecessary scrolling in the final edit.
+- Preserve a local copy of the final video and the four conflict/audit screenshots as fallback evidence.
