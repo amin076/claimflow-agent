@@ -1,249 +1,236 @@
 # ClaimFlow AI
 
-> Evidence-first agentic AI for turning messy business documents into structured, validated, actionable cases.
+> Evidence-first agentic AI for turning messy business documents into structured, validated, human-reviewable cases.
 
-[![Status](https://img.shields.io/badge/status-active%20build-0c6f73)](#project-status)
+[![Status](https://img.shields.io/badge/status-hackathon%20MVP%20verified-0c6f73)](#project-status)
 [![Hackathon](https://img.shields.io/badge/Forward-AI%20in%20Business-purple)](#hackathon-scope)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
+**Live application:** https://claimflow-api-vb6ijwpumq-ts.a.run.app
+
 ## Overview
 
-ClaimFlow AI is an agentic document-intelligence application for restoration, claims, field-service, and other document-heavy operations. It is designed to process mixed-quality inputs—emails, photographs, PDFs, invoices, reports, and handwritten forms—while preserving evidence, uncertainty, and human control.
+ClaimFlow AI is an agentic document-intelligence workflow for claims, restoration, field-service, and other document-heavy operations. It turns mixed-quality PDFs, photos, forms, notes, and email-style inputs into a structured case while preserving source evidence, uncertainty, deterministic business rules, and human control.
 
-The system does more than transcribe text. It creates a traceable case record, compares facts across documents, identifies missing or conflicting information, and recommends the next operational action. Low-confidence or consequential decisions are routed to a human reviewer.
+The system does more than transcribe text. It links extracted facts to source pages, detects missing or conflicting information, routes uncertainty to a reviewer, and records the workflow and human decisions in an audit trail.
 
-## Problem
+ClaimFlow is a hackathon prototype for **case preparation**. It does **not** autonomously approve or deny insurance claims.
 
-Business teams often receive critical information through fragmented and inconsistent channels:
+## Why this matters
 
-- blurred or rotated mobile photographs;
-- unclear handwriting;
+Business teams often receive important information through fragmented and inconsistent documents:
+
+- mobile photographs and scans;
+- handwritten or partially readable forms;
 - incomplete forms;
-- long email threads;
-- invoices and reports using different identifiers;
+- long notes and email threads;
+- invoices and reports with different values;
 - duplicate or contradictory facts;
-- missing signatures, dates, addresses, or contact details.
+- missing dates, identifiers, addresses, or contact details.
 
-Manual processing is slow and error-prone. A basic OCR pipeline can extract text, but it cannot reliably explain where a value came from, reconcile conflicting evidence, or decide when a human must intervene.
+A plain OCR pipeline can copy text, but staff still have to determine where a value came from, whether two sources disagree, and when a person must intervene. ClaimFlow focuses on that reconciliation layer.
 
-## Proposed solution
+## Verified MVP behavior
 
-ClaimFlow AI will provide an end-to-end workflow:
+The deployed MVP can:
 
-1. Ingest multiple documents and an email narrative.
-2. Assess image and document quality.
-3. Classify each document.
-4. Extract structured fields with confidence and source evidence.
-5. validate deterministic business rules.
-6. Compare facts across documents and identify contradictions.
-7. Route uncertainty to a human review queue.
-8. Produce a case summary and recommended next actions.
-9. Prepare—not automatically send—customer communications.
-10. Record an auditable timeline of agent, rule, and human decisions.
+- create and persist a synthetic case;
+- upload PDF/JPEG/PNG source documents;
+- store originals in Cloud Storage and case state in Firestore;
+- process a bounded multi-page packet with Gemini 3.5 Flash on Vertex AI;
+- run a controlled six-stage Google ADK workflow;
+- validate the model response with Zod;
+- materialize typed fields with confidence and page-linked evidence;
+- apply deterministic TypeScript business rules;
+- detect missing fields, low confidence, invalid values, and contradictions;
+- require human correction for conflicting source values;
+- preserve review decisions and audit events;
+- recover stale processing safely without silently re-billing the model;
+- fail closed on invalid model output, timeouts, page-budget violations, and unreadable input;
+- deploy automatically from `main` to Cloud Run through GitHub Actions using OIDC / Workload Identity Federation.
+
+## Live conflict example
+
+The official five-page synthetic motor-claim packet contains two deliberate conflicts:
+
+- `incident.date`: `2026-09-10` versus `2026-09-11`;
+- `damage.estimatedAmount`: `AUD 4,860.00` versus `AUD 4,142.00`.
+
+In the verified production build, ClaimFlow preserves both values, shows **Conflict detected**, creates a `CONTRADICTION` issue, disables simple acceptance, and requires a reviewer to inspect the cited evidence and save one canonical value with a reason.
+
+That behavior is intentional: the model is not allowed to silently decide which conflicting source is authoritative.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    U["Case worker"] --> UI["React web application"]
-    UI --> API["TypeScript API on Cloud Run"]
-    API --> IN["Case intake service"]
-    IN --> OBJ["Cloud Storage"]
-    IN --> DB["Firestore"]
-    IN --> ORCH["Google ADK coordinator"]
+    U["Case worker"] --> UI["React + Material UI"]
+    UI --> API["Fastify API on Cloud Run"]
+    API --> OBJ["Cloud Storage originals"]
+    API --> DB["Firestore case state"]
+    API --> ORCH["Google ADK workflow"]
 
-    ORCH --> Q["Quality agent"]
-    ORCH --> X["Extraction agent"]
-    ORCH --> V["Validation agent"]
-    ORCH --> P["Case-planning agent"]
+    ORCH --> I["Intake"]
+    ORCH --> Q["Quality"]
+    ORCH --> X["Extraction"]
+    ORCH --> V["Validation"]
+    ORCH --> P["Case planning"]
+    ORCH --> R["Review routing"]
 
-    Q --> GEM["Gemini on Vertex AI"]
-    X --> GEM
-    X --> DOC["Document AI (stretch)"]
-    V --> RULES["Deterministic rules"]
-    V --> REVIEW["Human review"]
-    P --> COMMS["Communication preview"]
-    COMMS --> VOICE["ElevenLabs (stretch)"]
-
+    X --> GEM["Gemini 3.5 Flash on Vertex AI"]
+    V --> RULES["Deterministic TypeScript rules"]
+    RULES --> REVIEW["Human review"]
+    GEM --> REVIEW
+    REVIEW --> DB
     REVIEW --> UI
-    ORCH --> AUDIT["Audit events"]
-    AUDIT --> DB
 ```
 
-See [System Architecture](docs/architecture.md) and [Agent Architecture](docs/agent-architecture.md).
+The important architectural boundary is that **agents interpret and plan, while schemas, deterministic rules, persistence, and consequential state transitions remain ordinary code**.
 
-## Core design principles
+See:
 
-- **Evidence first:** every extracted field links back to its source document and supporting evidence.
-- **Uncertainty is explicit:** confidence is stored and visible; the system does not silently invent missing facts.
-- **Human control:** high-impact, conflicting, or low-confidence outcomes require review.
-- **Deterministic guardrails:** dates, identifiers, amounts, required fields, and state transitions are checked in code.
-- **Auditable execution:** model output, rule results, human corrections, and case transitions are recorded.
-- **Minimum necessary data:** the prototype uses synthetic/redacted data and avoids unnecessary personal information.
-- **Agentic where useful:** agents interpret and plan; ordinary services handle storage, validation, and authorization.
+- [System architecture](docs/architecture.md)
+- [Agent architecture](docs/agent-architecture.md)
+- [Human review policy](docs/human-review-policy.md)
 
-## Planned agents
+## Six-stage workflow
 
-| Agent               | Responsibility                                          | Must not do                       |
-| ------------------- | ------------------------------------------------------- | --------------------------------- |
-| Intake coordinator  | Create the case and select the workflow                 | Make claim decisions              |
-| Quality agent       | Detect blur, cropping, rotation, and unreadable regions | Guess obscured content            |
-| Extraction agent    | Produce typed fields with confidence and evidence       | Hide ambiguity                    |
-| Validation agent    | Reconcile documents and identify conflicts              | Override deterministic rules      |
-| Case-planning agent | Summarise the case and recommend actions                | Execute consequential actions     |
-| Communication agent | Draft a message or voice interaction                    | Contact a person without approval |
+```text
+INTAKE → QUALITY → EXTRACTION → VALIDATION → CASE_PLANNER → REVIEW_ROUTER
+```
 
-## Planned technology
+Each persisted `AgentRun` can record status, timestamps, model/model version, prompt version, token usage, duration, input/output references, and a safe error summary.
 
-| Layer                | Technology                              |
-| -------------------- | --------------------------------------- |
-| Web application      | React, TypeScript, Vite, Material UI    |
-| API                  | Node.js, TypeScript, Fastify            |
-| Agent orchestration  | Google Agent Development Kit (ADK)      |
-| Multimodal reasoning | Gemini on Vertex AI                     |
-| Specialist OCR/forms | Google Document AI (stretch goal)       |
-| Runtime validation   | Zod plus deterministic TypeScript rules |
-| Case data            | Firestore                               |
-| Original documents   | Cloud Storage                           |
-| Deployment           | Google Cloud Run                        |
-| Voice experience     | ElevenLabs (stretch goal)               |
-| Testing              | Vitest                                  |
-| Delivery             | GitHub Actions                          |
+## Safety model
 
-Technology choices are evaluated continuously against delivery time, cost, latency, and demo reliability.
+ClaimFlow uses several independent controls:
 
-## Planned user experience
+- **Synthetic/redacted data only** for the prototype.
+- **Structured output validation** with Zod.
+- **Source evidence** attached to extracted fields.
+- **Deterministic rules** for dates, required fields, contradictions, confidence, and state transitions.
+- **Human review** for uncertainty and conflict.
+- **No automatic claim decision.**
+- **No automatic external contact.**
+- **No silent conflict resolution.**
+- **Fail-closed behavior** for invalid/truncated model output.
+- **Single bounded model invocation** per processing attempt; no hidden retry loop.
 
-1. **New Case** — upload synthetic sample documents and paste an email narrative.
-2. **Processing Timeline** — see which agent or rule is running.
-3. **Case Workspace** — compare source documents with extracted fields.
-4. **Review Queue** — accept, edit, or reject uncertain values.
-5. **Case Summary** — see conflicts, risks, and recommended next actions.
-6. **Communication Preview** — review a proposed email or voice interaction before any external action.
+## Technology
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, Vite, Material UI |
+| API | Node.js, TypeScript, Fastify |
+| Agent orchestration | Google Agent Development Kit (ADK) |
+| Multimodal extraction | Gemini 3.5 Flash on Vertex AI |
+| Runtime contracts | Zod |
+| Deterministic validation | TypeScript rules |
+| Case data | Firestore |
+| Original documents | Cloud Storage |
+| Runtime | Google Cloud Run |
+| CI/CD | GitHub Actions + Google OIDC/WIF |
+| Testing | Vitest + Firestore emulator + container smoke tests |
+
+### Document AI decision
+
+Google Document AI was evaluated as an optional specialist OCR/forms layer. It is **deferred for the hackathon MVP** because the live five-page synthetic benchmark was successfully processed by Gemini multimodal extraction with page-linked evidence and the deliberate conflicts preserved.
+
+Document AI becomes worthwhile if later handwriting, blurry-scan, dense-table, or layout benchmarks demonstrate a measurable improvement that justifies the extra service complexity.
+
+See [Phase 9 evaluation](docs/phase9-document-ai-evaluation.md).
+
+## Project status
+
+**Hackathon MVP verified in production.**
+
+| Phase | Status |
+|---|---|
+| 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete |
+| 6 — Gemini multimodal extraction | ✅ Live verified |
+| 7 — ADK agent workflow | ✅ Live verified |
+| 8 — deterministic rules and human review | ✅ Live verified and conflict-hardened |
+| 9 — Document AI evaluation | ✅ Complete; deferred by evidence |
+| 10 — CI/CD and secure deployment | ✅ Complete; keyless auto-deploy verified |
+| 11 — observability and evaluation | ✅ Complete for hackathon MVP |
+| 12 — demo and submission | 🟡 Recording/submission packaging in progress |
+
+Latest verified production baseline before documentation closeout:
+
+`d77d45a23233c7a33ebdf9f23ed15964003b1b46`
+
+GitHub Actions run #56 passed formatting, linting, type checking, tests, build, container smoke, Firestore integration, OIDC authentication, Cloud Run deployment, and production endpoint verification.
+
+See [Phase 11 evaluation closeout](docs/phase11-evaluation-closeout.md) and [Phase 12 submission runbook](docs/phase12-submission-runbook.md).
 
 ## Hackathon scope
 
-This project is intended for the **Forward: AI in Business Hackathon**:
+ClaimFlow is built for **Forward: AI in Business** with the primary positioning:
 
-- Main submission: **Track 1 — Improve an Existing Business Capability**
-- Optional parallel submission: **Built With ElevenLabs**
-- Target: a deployed, end-to-end MVP demonstrable in 3–5 minutes
-- Team size: 2–5 participants
+**Improve an Existing Business Capability** — reduce manual document reconciliation while keeping source evidence and human control visible.
 
-### Project status
+The demo is designed to be completed in approximately 2–3 minutes.
 
-**Active hackathon build.** Phases 1 and 2 provide the TypeScript workspace, React
-interface, Fastify API, evidence-linked domain model, synthetic fixtures, tests,
-and CI. Phase 3 provides the complete local case workflow across the Fastify API
-and responsive React human-review workspace. Cloud persistence, AI integration,
-and deployment are the next milestones.
+## Demo
 
-## MVP acceptance criteria
+The current official demo uses a five-page synthetic motor-claim packet. The strongest moment is not a clean extraction; it is the deliberate contradiction flow, where the system shows two source values and refuses to let the reviewer simply accept the combined AI answer.
 
-The MVP is complete when a reviewer can:
+See [Demo Scenario](docs/demo-scenario.md).
 
-- upload a small synthetic multi-document case;
-- receive classified documents and typed extracted fields;
-- inspect confidence and source evidence;
-- see at least one detected missing field or contradiction;
-- correct an uncertain value in the review queue;
-- generate a traceable case summary and next-action recommendation;
-- complete the flow through a stable deployed URL.
+## Evaluation evidence
 
-See the [Roadmap](docs/roadmap.md) and [Demo Scenario](docs/demo-scenario.md).
+Automated tests cover:
+
+- full six-stage workflow success;
+- invalid JSON / invalid model output;
+- foreign evidence references;
+- forbidden extra output;
+- `MAX_TOKENS` and safety-stopped completions;
+- concurrent processing protection;
+- timeout and provider abort;
+- stale execution recovery;
+- late-result rejection;
+- PDF page-budget enforcement;
+- unreadable document routing;
+- invalid and future dates;
+- cross-document contradiction handling;
+- evidence-backed human correction;
+- rejection never becoming `READY`.
+
+The live production packet additionally demonstrated page-linked date and amount conflicts with the required human canonical correction flow.
 
 ## Local development
 
-The local application does **not** require a Google Cloud account, `gcloud`,
-Firestore, or Gemini credentials. It uses local storage, an in-memory database,
-and mock AI settings by default.
+### Requirements
 
-### Required versions
-
-| Tool       |   Team version | Notes                                                    |
-| ---------- | -------------: | -------------------------------------------------------- |
-| Git        | Current stable | Required to clone, pull, branch, and commit              |
-| Node.js    |  22.x or newer | CI uses Node.js 22; use Node.js 22 for identical results |
-| npm        |         11.9.0 | Pinned by `packageManager`; do not use Yarn              |
-| TypeScript |          6.0.3 | Installed locally by npm; do not install it globally     |
-
-Check your versions in PowerShell:
-
-```powershell
-git --version
-node --version
-npm --version
-```
-
-If npm is not `11.9.0`:
-
-```powershell
-npm install --global npm@11.9.0
-```
-
-Close and reopen PowerShell after installing or updating Node.js/npm so the
-updated programs are available on `PATH`.
-
-### First-time setup on Windows
+- Node.js 22.x or newer
+- npm 11.9.0
+- Git
 
 ```powershell
 git clone https://github.com/amin076/claimflow-agent.git
 Set-Location claimflow-agent
 git switch main
-git pull origin main
 npm ci
 Copy-Item .env.example .env
 npm run dev
 ```
 
-`npm run dev` starts both applications:
+Local development defaults to cloud-independent adapters:
 
-- Frontend: <http://localhost:5173>
-- Backend: <http://localhost:8080>
-- Health endpoint: <http://localhost:8080/health>
-- Synthetic case endpoint: <http://localhost:8080/api/cases/demo>
-
-Open <http://localhost:5173> and select **Create demo case**. The page should
-display case `CF-2026-001`, extracted fields, confidence, evidence, and two
-open issues.
-
-### Run Frontend and Backend separately
-
-This is useful when diagnosing errors or working on only one application.
-
-Terminal 1:
-
-```powershell
-npm run dev:api
+```env
+STORAGE_MODE=local
+DATABASE_MODE=memory
+AI_MODE=mock
 ```
 
-Terminal 2:
+Frontend: `http://localhost:5173`
 
-```powershell
-npm run dev:web
-```
+Backend: `http://localhost:8080`
 
-Confirm the Backend from another PowerShell window:
+Health: `http://localhost:8080/health`
 
-```powershell
-Invoke-RestMethod http://localhost:8080/health
-Invoke-RestMethod http://localhost:8080/api/cases/demo
-```
-
-### Start work each day
-
-```powershell
-git switch main
-git pull origin main
-npm ci
-git switch -c feature/short-description
-npm run dev
-```
-
-Do not work directly on `main`. If your branch already exists, replace the
-`git switch -c` command with `git switch your-branch-name`.
-
-### Quality checks before a Pull Request
+### Quality checks
 
 ```powershell
 npm run format:check
@@ -253,82 +240,47 @@ npm test
 npm run build
 ```
 
-All checks must pass before merging. GitHub Actions repeats the same checks.
+GitHub Actions repeats these checks and also runs the Firestore emulator integration test and packaged-container smoke test.
 
-For complete setup, daily workflow, troubleshooting, and Google Cloud
-boundaries, see the [Local Development Guide](docs/local-development.md) or its
-[Farsi version](docs/local-development.fa.md).
+## Deployment
+
+Merges to `main` trigger the production workflow after quality, Firestore, and container gates pass.
+
+Deployment uses GitHub OIDC / Google Workload Identity Federation rather than downloadable service-account keys. The workflow builds from source, deploys `claimflow-api` in `australia-southeast1`, and verifies `/health`, `/ready`, and the web root.
+
+See:
+
+- [Cloud deployment guide](docs/cloud-deployment.md)
+- [Phase 10 CI/CD closeout](docs/phase10-cicd-closeout.md)
 
 ## Repository map
 
 ```text
-.
+claimflow-agent/
 ├── apps/
 │   ├── api/
 │   └── web/
 ├── packages/
 │   ├── config/
 │   └── domain/
-├── README.md
-├── CONTRIBUTING.md
-├── LICENSE
 ├── docs/
-│   ├── architecture.md
-│   ├── agent-architecture.md
-│   ├── behzad-frontend-work-plan.md
-│   ├── data-model.md
-│   ├── demo-scenario.md
-│   ├── human-review-policy.md
-│   ├── judging-strategy.md
-│   ├── local-development.md
-│   ├── local-development.fa.md
-│   ├── local-api.md
-│   ├── problem-statement.md
-│   ├── product-vision.md
-│   ├── roadmap.md
-│   ├── roadmap.fa.md
-│   ├── security-and-privacy.md
-│   └── team-responsibilities.md
 ├── sample-data/
-│   └── README.md
-└── .github/
-    ├── workflows/ci.yml
-    ├── pull_request_template.md
-    └── ISSUE_TEMPLATE/
-        ├── bug.md
-        └── feature.md
+├── scripts/
+├── .github/workflows/
+└── README.md
 ```
 
 ## Team
 
-- **Amin Nazari** — product direction, agent architecture, backend, Google Cloud, integration
-- **Behzad** — proposed ownership: frontend, human-review experience, sample case, demo and pitch support
-
-Final responsibilities are documented in [Team Responsibilities](docs/team-responsibilities.md).
+- **Amin Nazari** — product direction, agent architecture, backend, Google Cloud, integration and evaluation
+- **Behzad** — frontend/human-review experience and demo/pitch support
 
 ## Responsible-use boundary
 
-ClaimFlow AI is a hackathon prototype, not an insurance decision engine. It must not autonomously approve or deny claims, determine legal liability, contact real customers, or process unredacted production data. All sample inputs should be synthetic or properly redacted.
+ClaimFlow AI is a hackathon prototype, not an insurance decision engine. It must not autonomously approve or deny claims, determine legal liability, contact real customers, or process unredacted production data.
 
-The project is not affiliated with, endorsed by, or connected to any restoration company, insurer, or claims-management provider unless explicitly stated later.
-
-## Contributing
-
-Use focused branches and pull requests. Do not push product implementation directly to `main`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The project is not affiliated with, endorsed by, or connected to any insurer, restoration company, or claims-management provider unless explicitly stated.
 
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
-
-## Phases 4–5: cloud adapters and deployment
-
-Actual synthetic PDF/image upload and private download, Firestore transactions, GCS/local file adapters, and a combined React/API container are implemented. Live deployment and cloud persistence verification passed on revision `claimflow-api-00002-klk`. Local mode defaults to mock; see Phases 6–8 for Vertex activation.
-
-- [Deployment and verification](docs/cloud-deployment.md)
-- [راهنمای فارسی](docs/cloud-deployment.fa.md)
-
-The roadmap continues through Phase 12; Phases 6–8 cover Gemini extraction, ADK orchestration, and deterministic validation with human review.
-
-## Phases 6–8
-
-Gemini extraction, the six-step ADK Workflow, deterministic validation and evidence-backed human corrections are implemented. Phases 4–5 passed live persistence verification; live Gemini acceptance is pending. See [English guide](docs/phases-6-8.md) / [راهنمای فارسی](docs/phases-6-8.fa.md). Deploy with `scripts/deploy-cloud.ps1 -AiMode vertex`; test with `node scripts/smoke-vertex.mjs http://localhost:8081`.
