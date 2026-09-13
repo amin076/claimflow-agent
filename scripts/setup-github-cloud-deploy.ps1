@@ -18,9 +18,33 @@ function Invoke-Gcloud {
   if ($LASTEXITCODE -ne 0) { throw "gcloud failed (exit $LASTEXITCODE): gcloud $args" }
 }
 
+# Existence probes are expected to return non-zero while bootstrapping new resources.
+# Windows' gcloud.ps1 wrapper writes those expected NOT_FOUND messages to the
+# PowerShell error stream, so temporarily silence non-terminating errors here.
 function Test-Gcloud {
-  & gcloud @args *> $null
-  return $LASTEXITCODE -eq 0
+  $previousPreference = $ErrorActionPreference
+  $exitCode = 1
+  try {
+    $ErrorActionPreference = 'SilentlyContinue'
+    & gcloud @args *> $null
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  return $exitCode -eq 0
+}
+
+function Test-GhAuth {
+  $previousPreference = $ErrorActionPreference
+  $exitCode = 1
+  try {
+    $ErrorActionPreference = 'SilentlyContinue'
+    & gh auth status --hostname github.com *> $null
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousPreference
+  }
+  return $exitCode -eq 0
 }
 
 Write-Host "Configuring keyless GitHub deployment for $GitHubRepo -> $Project"
@@ -34,12 +58,14 @@ Invoke-Gcloud services enable `
   "--project=$Project"
 
 if (-not (Test-Gcloud iam service-accounts describe $deployer "--project=$Project")) {
+  Write-Host "Creating deployer service account: $deployer"
   Invoke-Gcloud iam service-accounts create $deployerName `
     "--project=$Project" `
     '--display-name=ClaimFlow GitHub deployer'
 }
 
 if (-not (Test-Gcloud iam workload-identity-pools describe $poolId '--location=global' "--project=$Project")) {
+  Write-Host "Creating Workload Identity Pool: $poolId"
   Invoke-Gcloud iam workload-identity-pools create $poolId `
     '--location=global' `
     "--project=$Project" `
@@ -47,6 +73,7 @@ if (-not (Test-Gcloud iam workload-identity-pools describe $poolId '--location=g
 }
 
 if (-not (Test-Gcloud iam workload-identity-pools providers describe $providerId "--workload-identity-pool=$poolId" '--location=global' "--project=$Project")) {
+  Write-Host "Creating GitHub OIDC provider: $providerId"
   Invoke-Gcloud iam workload-identity-pools providers create-oidc $providerId `
     "--workload-identity-pool=$poolId" `
     '--location=global' `
@@ -94,16 +121,13 @@ Write-Host "GCP_DEPLOY_SERVICE_ACCOUNT=$deployer"
 
 $gh = Get-Command gh -ErrorAction SilentlyContinue
 $variablesConfigured = $false
-if ($gh) {
-  & gh auth status --hostname github.com *> $null
-  if ($LASTEXITCODE -eq 0) {
-    & gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo $GitHubRepo --body $providerName
-    if ($LASTEXITCODE -ne 0) { throw 'Failed to set GCP_WORKLOAD_IDENTITY_PROVIDER with gh.' }
-    & gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo $GitHubRepo --body $deployer
-    if ($LASTEXITCODE -ne 0) { throw 'Failed to set GCP_DEPLOY_SERVICE_ACCOUNT with gh.' }
-    $variablesConfigured = $true
-    Write-Host 'GitHub repository variables configured.'
-  }
+if ($gh -and (Test-GhAuth)) {
+  & gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo $GitHubRepo --body $providerName
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to set GCP_WORKLOAD_IDENTITY_PROVIDER with gh.' }
+  & gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo $GitHubRepo --body $deployer
+  if ($LASTEXITCODE -ne 0) { throw 'Failed to set GCP_DEPLOY_SERVICE_ACCOUNT with gh.' }
+  $variablesConfigured = $true
+  Write-Host 'GitHub repository variables configured.'
 }
 
 if (-not $variablesConfigured) {
