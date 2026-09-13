@@ -103,16 +103,25 @@ foreach ($role in @('roles/run.sourceDeveloper', 'roles/serviceusage.serviceUsag
     '--condition=None'
 }
 
+# The deployer must be allowed to attach the runtime identity to the Cloud Run revision.
 Invoke-Gcloud iam service-accounts add-iam-policy-binding $runtime `
   "--project=$Project" `
   "--member=serviceAccount:$deployer" `
   '--role=roles/iam.serviceAccountUser'
 
+# Cloud Run source deployments build with the project's default Compute Engine
+# service account unless a different build identity is configured. The build
+# identity needs roles/run.builder, and the GitHub deployer needs iam.serviceAccounts.actAs
+# on that build identity so it can submit the source build.
 $buildServiceAccount = "$projectNumber-compute@developer.gserviceaccount.com"
 Invoke-Gcloud projects add-iam-policy-binding $Project `
   "--member=serviceAccount:$buildServiceAccount" `
   '--role=roles/run.builder' `
   '--condition=None'
+Invoke-Gcloud iam service-accounts add-iam-policy-binding $buildServiceAccount `
+  "--project=$Project" `
+  "--member=serviceAccount:$deployer" `
+  '--role=roles/iam.serviceAccountUser'
 
 Write-Host ''
 Write-Host 'Google Cloud bootstrap complete.'
