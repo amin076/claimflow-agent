@@ -41,6 +41,25 @@ const RuntimeInfoSchema = z.object({
 });
 export type RuntimeInfo = z.infer<typeof RuntimeInfoSchema>;
 export const caseApi = {
+  async get(id: string): Promise<ClaimCase> {
+    return ClaimCaseSchema.parse(await request(`/api/cases/${encodeURIComponent(id)}`));
+  },
+  async clarification(
+    id: string,
+    action: string,
+    body: unknown,
+    token: string,
+  ): Promise<ClaimCase> {
+    return ClaimCaseSchema.parse(
+      await request(
+        `/api/cases/${encodeURIComponent(id)}/clarifications${action ? '/' + action.split('/').map(encodeURIComponent).join('/') : ''}`,
+        {
+          ...jsonRequest('POST', body),
+          headers: { 'Content-Type': 'application/json', 'x-clarification-token': token },
+        },
+      ),
+    );
+  },
   async config(): Promise<RuntimeInfo> {
     return RuntimeInfoSchema.parse(await request('/api/config'));
   },
@@ -77,9 +96,14 @@ export const caseApi = {
       await request(`/api/cases/${encodeURIComponent(id)}/process`, jsonRequest('POST')),
     );
   },
-  async review(id: string, input: ReviewCaseInput): Promise<ClaimCase> {
+  async review(id: string, input: ReviewCaseInput, token?: string): Promise<ClaimCase> {
     return ClaimCaseSchema.parse(
-      await request(`/api/cases/${encodeURIComponent(id)}/review`, jsonRequest('PATCH', input)),
+      await request(`/api/cases/${encodeURIComponent(id)}/review`, {
+        ...jsonRequest('PATCH', input),
+        ...(token
+          ? { headers: { 'Content-Type': 'application/json', 'x-clarification-token': token } }
+          : {}),
+      }),
     );
   },
 };

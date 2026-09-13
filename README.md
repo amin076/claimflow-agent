@@ -111,7 +111,7 @@ ClaimFlow uses several independent controls:
 - **Deterministic rules** for dates, required fields, contradictions, confidence, and state transitions.
 - **Human review** for uncertainty and conflict.
 - **No automatic claim decision.**
-- **No automatic external contact.**
+- **No automatic external contact.** Optional ElevenLabs clarification requires a protected human approval and explicit call action to a configured test participant.
 - **No silent conflict resolution.**
 - **Fail-closed behavior** for invalid/truncated model output.
 - **Single bounded model invocation** per processing attempt; no hidden retry loop.
@@ -198,6 +198,10 @@ Automated tests cover:
 - rejection never becoming `READY`.
 
 The live production packet additionally demonstrated page-linked date and amount conflicts with the required human canonical correction flow.
+
+## Voice clarification
+
+Optional ElevenLabs outbound clarification adds human-approved questions, signed post-call transcripts and evidence-backed human corrections. See [setup and live acceptance](docs/elevenlabs-clarification.md). Production voice acceptance remains pending provider configuration and a real synthetic call.
 
 ## Local development
 
