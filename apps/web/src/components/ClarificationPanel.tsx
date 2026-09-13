@@ -65,7 +65,11 @@ function RequestCard({
             </Typography>
           ))}
         <TextField
-          label={item.status === 'DRAFT' ? 'Proposed clarification question' : 'Approved clarification question'}
+          label={
+            item.status === 'DRAFT'
+              ? 'Proposed clarification question'
+              : 'Approved clarification question'
+          }
           multiline
           value={question}
           disabled={item.status !== 'DRAFT' || busy}
