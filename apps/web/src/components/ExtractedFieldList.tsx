@@ -27,9 +27,7 @@ type Props = {
 type FilterCategory = 'ALL' | 'NEEDS_REVIEW' | 'ACCEPTED' | 'PROPOSED';
 
 const hasConflict = (field: ExtractedField) =>
-  field.uncertaintyReasons.some((reason) =>
-    reason.startsWith('Conflicting source values:'),
-  );
+  field.uncertaintyReasons.some((reason) => reason.startsWith('Conflicting source values:'));
 
 export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) => {
   const [corrections, setCorrections] = useState<Record<string, string>>({});
@@ -163,8 +161,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
           {filteredFields.map((field) => {
             const percent = Math.round(field.confidence * 100);
             const conflicted = hasConflict(field);
-            const correction =
-              corrections[field.id] ?? (conflicted ? '' : field.displayValue);
+            const correction = corrections[field.id] ?? (conflicted ? '' : field.displayValue);
             return (
               <Box key={field.id}>
                 <Stack
@@ -181,9 +178,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                     sx={{ alignItems: 'center', flexWrap: 'wrap' }}
                   >
                     <Typography sx={{ fontWeight: 750 }}>{field.name}</Typography>
-                    {conflicted && (
-                      <Chip label="Conflict detected" size="small" color="error" />
-                    )}
+                    {conflicted && <Chip label="Conflict detected" size="small" color="error" />}
                   </Stack>
                   <Typography color={field.requiresReview ? 'warning.main' : 'success.main'}>
                     {percent}% model estimate
@@ -224,11 +219,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                   </Typography>
                 ))}
                 {conflicted && (
-                  <Typography
-                    variant="body2"
-                    color="error.main"
-                    sx={{ mt: 1, fontWeight: 700 }}
-                  >
+                  <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 700 }}>
                     Review the cited evidence and save one canonical value. Accepting the combined
                     AI value does not resolve this conflict.
                   </Typography>
