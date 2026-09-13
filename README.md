@@ -118,19 +118,19 @@ ClaimFlow uses several independent controls:
 
 ## Technology
 
-| Layer | Technology |
-|---|---|
-| Frontend | React, TypeScript, Vite, Material UI |
-| API | Node.js, TypeScript, Fastify |
-| Agent orchestration | Google Agent Development Kit (ADK) |
-| Multimodal extraction | Gemini 3.5 Flash on Vertex AI |
-| Runtime contracts | Zod |
-| Deterministic validation | TypeScript rules |
-| Case data | Firestore |
-| Original documents | Cloud Storage |
-| Runtime | Google Cloud Run |
-| CI/CD | GitHub Actions + Google OIDC/WIF |
-| Testing | Vitest + Firestore emulator + container smoke tests |
+| Layer                    | Technology                                          |
+| ------------------------ | --------------------------------------------------- |
+| Frontend                 | React, TypeScript, Vite, Material UI                |
+| API                      | Node.js, TypeScript, Fastify                        |
+| Agent orchestration      | Google Agent Development Kit (ADK)                  |
+| Multimodal extraction    | Gemini 3.5 Flash on Vertex AI                       |
+| Runtime contracts        | Zod                                                 |
+| Deterministic validation | TypeScript rules                                    |
+| Case data                | Firestore                                           |
+| Original documents       | Cloud Storage                                       |
+| Runtime                  | Google Cloud Run                                    |
+| CI/CD                    | GitHub Actions + Google OIDC/WIF                    |
+| Testing                  | Vitest + Firestore emulator + container smoke tests |
 
 ### Document AI decision
 
@@ -144,16 +144,16 @@ See [Phase 9 evaluation](docs/phase9-document-ai-evaluation.md).
 
 **Hackathon MVP verified in production.**
 
-| Phase | Status |
-|---|---|
-| 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete |
-| 6 — Gemini multimodal extraction | ✅ Live verified |
-| 7 — ADK agent workflow | ✅ Live verified |
-| 8 — deterministic rules and human review | ✅ Live verified and conflict-hardened |
-| 9 — Document AI evaluation | ✅ Complete; deferred by evidence |
-| 10 — CI/CD and secure deployment | ✅ Complete; keyless auto-deploy verified |
-| 11 — observability and evaluation | ✅ Complete for hackathon MVP |
-| 12 — demo and submission | 🟡 Recording/submission packaging in progress |
+| Phase                                                                  | Status                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete                                   |
+| 6 — Gemini multimodal extraction                                       | ✅ Live verified                              |
+| 7 — ADK agent workflow                                                 | ✅ Live verified                              |
+| 8 — deterministic rules and human review                               | ✅ Live verified and conflict-hardened        |
+| 9 — Document AI evaluation                                             | ✅ Complete; deferred by evidence             |
+| 10 — CI/CD and secure deployment                                       | ✅ Complete; keyless auto-deploy verified     |
+| 11 — observability and evaluation                                      | ✅ Complete for hackathon MVP                 |
+| 12 — demo and submission                                               | 🟡 Recording/submission packaging in progress |
 
 Latest verified production baseline before documentation closeout:
 
