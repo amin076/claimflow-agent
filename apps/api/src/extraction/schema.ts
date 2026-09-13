@@ -30,8 +30,78 @@ export const ModelExtractionSchema = z.strictObject({
   }),
 });
 export type ModelExtraction = z.infer<typeof ModelExtractionSchema>;
-export const responseJsonSchema = z.toJSONSchema(ModelExtractionSchema);
-delete responseJsonSchema.$schema;
+
+const VERTEX_JSON_SCHEMA_KEYWORDS = new Set([
+  '$id',
+  '$defs',
+  '$ref',
+  '$anchor',
+  'type',
+  'format',
+  'title',
+  'description',
+  'enum',
+  'items',
+  'prefixItems',
+  'minItems',
+  'maxItems',
+  'minimum',
+  'maximum',
+  'anyOf',
+  'oneOf',
+  'properties',
+  'additionalProperties',
+  'required',
+  'propertyOrdering',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Vertex responseJsonSchema accepts only a documented subset of JSON Schema.
+ * Keep the full Zod schema for server-side validation, but remove unsupported
+ * generation hints before sending the schema to Gemini.
+ */
+export function sanitizeVertexJsonSchema(schema: unknown): unknown {
+  if (!isRecord(schema)) return schema;
+
+  const sanitized: Record<string, unknown> = {};
+  const hasRef = typeof schema.$ref === 'string';
+
+  for (const [key, value] of Object.entries(schema)) {
+    if (!VERTEX_JSON_SCHEMA_KEYWORDS.has(key)) continue;
+    if (hasRef && key !== '$ref' && !key.startsWith('$')) continue;
+
+    if ((key === 'properties' || key === '$defs') && isRecord(value)) {
+      sanitized[key] = Object.fromEntries(
+        Object.entries(value).map(([name, childSchema]) => [
+          name,
+          sanitizeVertexJsonSchema(childSchema),
+        ]),
+      );
+      continue;
+    }
+
+    if ((key === 'items' || key === 'additionalProperties') && isRecord(value)) {
+      sanitized[key] = sanitizeVertexJsonSchema(value);
+      continue;
+    }
+
+    if ((key === 'prefixItems' || key === 'anyOf' || key === 'oneOf') && Array.isArray(value)) {
+      sanitized[key] = value.map((childSchema) => sanitizeVertexJsonSchema(childSchema));
+      continue;
+    }
+
+    sanitized[key] = value;
+  }
+
+  return sanitized;
+}
+
+export const responseJsonSchema = sanitizeVertexJsonSchema(z.toJSONSchema(ModelExtractionSchema));
+
 export function parseExtraction(text: string, pages: Map<string, number>): ModelExtraction {
   if (Buffer.byteLength(text) > 100_000) throw new Error('Model output exceeds limit');
   const result = ModelExtractionSchema.parse(JSON.parse(text));
