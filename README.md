@@ -177,8 +177,8 @@ See [Phase 9 evaluation](docs/phase9-document-ai-evaluation.md).
 
 **Submission-ready hackathon MVP, live verified in production.**
 
-| Phase                                                                  | Status                                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Phase                                                                  | Status                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete                                                         |
 | 6 — Gemini multimodal extraction                                       | ✅ Live verified                                                    |
 | 7 — ADK agent workflow                                                 | ✅ Live verified                                                    |
