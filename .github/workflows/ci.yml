@@ -21,6 +21,8 @@ jobs:
       - name: Use the repository npm version
         run: npm install --global npm@11.9.0
       - run: npm ci
+      - name: Print formatted schema for diagnosis
+        run: npx prettier apps/api/src/extraction/schema.ts
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
