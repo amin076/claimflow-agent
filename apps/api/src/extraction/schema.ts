@@ -143,6 +143,15 @@ export function parseExtraction(text: string, pages: Map<string, number>): Model
         'INVALID_MISSING_FIELD_NAME',
         'Model declared a missing field outside the supported ClaimFlow domain.',
       );
+    if (
+      parsed.error.issues.some(
+        (issue) => issue.path[0] === 'fields' && issue.path.at(-1) === 'page',
+      )
+    )
+      invalidModelOutput(
+        'INVALID_EVIDENCE_PAGE',
+        'Model cited an invalid evidence page number.',
+      );
     invalidModelOutput(
       'SCHEMA_VALIDATION_FAILED',
       'Model JSON did not satisfy the server-side extraction contract.',
