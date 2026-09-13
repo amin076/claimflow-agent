@@ -24,6 +24,35 @@ export const ClarificationRequestSchema = z.object({
   channel: z.enum(['VOICE', 'EMAIL', 'SMS']),
   status: z.enum(['DRAFT', 'APPROVED', 'CALLING', 'COMPLETED', 'FAILED', 'CANCELLED', 'RESOLVED']),
   question: z.string().trim().min(1).max(2000),
+  drafting: z
+    .object({
+      source: z.enum(['GEMINI', 'TEMPLATE']),
+      durationMs: z.number().int().nonnegative(),
+      failureClass: z
+        .enum([
+          'TIMEOUT',
+          'ACCESS_DENIED',
+          'RATE_LIMIT',
+          'PROVIDER_ERROR',
+          'INCOMPLETE_OUTPUT',
+          'INVALID_TEXT',
+          'CANDIDATES_CHANGED',
+        ])
+        .optional(),
+      finishReason: z
+        .enum([
+          'STOP',
+          'MAX_TOKENS',
+          'SAFETY',
+          'RECITATION',
+          'BLOCKLIST',
+          'PROHIBITED_CONTENT',
+          'OTHER',
+          'UNKNOWN',
+        ])
+        .optional(),
+    })
+    .optional(),
   candidateValues: z.array(z.string().max(2000)).max(20),
   context: z.string().max(2000),
   createdAt: TimestampSchema,

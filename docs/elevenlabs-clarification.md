@@ -2,7 +2,7 @@
 
 ## Implementation and boundary
 
-The reviewer creates a request from an open contradiction, missing field or low-confidence issue. In Vertex mode one bounded Gemini request drafts the question; mock mode uses an explicitly deterministic template. The reviewer edits and approves the exact question, then separately starts the ElevenLabs outbound call. The question is immutable after approval; cancel an unstarted request to replace it.
+The reviewer creates a request from an open contradiction, missing field or low-confidence issue. In Vertex mode one bounded Gemini request enhances the question using the configured AI_TIMEOUT_MS and one attempt. Any provider error, timeout, incomplete/invalid output or loss of a candidate value preserves an editable safe template. Mock mode uses the template without a model call. The UI discloses fallback, and optional persisted drafting metadata records source, duration, an allowlisted failure class and finish reason. CLARIFICATION_DRAFT_RESULT logs contain only identifiers and these diagnostics; CLARIFICATION_DRAFT_FALLBACK records the fallback in the case audit. Provider bodies, prompts and personal data are never logged by this path. The reviewer edits and approves the exact question, then separately starts the ElevenLabs outbound call. The question is immutable after approval; cancel an unstarted request to replace it.
 
 State transitions: DRAFT → APPROVED → CALLING → COMPLETED → RESOLVED. DRAFT/APPROVED may become CANCELLED. CALLING may become FAILED. RESOLVED requires a human canonical correction supported by the response and passing field validation. COMPLETED means a transcript arrived, not that the customer supplied a usable answer. No claim decision or automatic field correction is made.
 
@@ -70,3 +70,11 @@ At most 10 requests per case; each response retains up to 100 turns, 4,000 chara
 - https://elevenlabs.io/docs/eleven-api/resources/webhooks
 
 The installed official JavaScript SDK verifies HMAC. Automated tests cover raw-body verification, replay idempotency, provider request shape, concurrent reservation, stale states, persistence and human-only correction. The Firestore CI gate includes cross-client call reservation and concurrent webhook delivery.
+
+## Release verification for the drafting regression
+
+PR #23 originally swallowed drafting failures without diagnosis or regression tests. The reviewed fix adds a testable SDK boundary aligned with extraction, candidate preservation, persisted safe diagnostics and a non-blocking UI notice. STOP remains required for accepting AI wording; any other finish reason uses the template. Existing approval, outbound reservation, no-redial and signed-transcript controls remain unchanged.
+
+The existing deploy job now snapshots six numbered secret references before deployment, compares them after deployment and verifies the stable URL health/readiness. It never accesses secret payloads. A metadata mismatch fails the check without changing credentials. Previous draft-502 request latencies are inspected if the existing deployment identity has logging access; unavailable log access is reported without expanding IAM. The old application handler erased the underlying provider exception, so historical timeout must not be claimed as confirmed solely from the old generic 502.
+
+Production acceptance still requires a human to approve the displayed question, answer the configured test phone and save the final canonical correction. Deployment success alone is not evidence of voice acceptance.
