@@ -15,7 +15,7 @@ export const CaseList = ({ cases, selectedId, onSelect }: Props) => (
         Cases
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        In-memory cases for this API session
+        Cases in this ClaimFlow workspace
       </Typography>
     </Box>
     <Divider />
