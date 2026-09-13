@@ -25,6 +25,14 @@ function RequestCard({
           {item.fieldName} · {item.status}
         </Typography>
         <Typography variant="body2">{item.context}</Typography>
+        {item.drafting?.failureClass && (
+          <Alert severity="info">
+            AI wording unavailable; safe template used. Review before approval.
+          </Alert>
+        )}
+        {item.drafting?.source === 'GEMINI' && (
+          <Typography variant="caption">Gemini-assisted draft · human approval required</Typography>
+        )}
         {item.candidateValues.length > 0 && (
           <Typography>Candidate values: {item.candidateValues.join(' / ')}</Typography>
         )}

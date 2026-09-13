@@ -102,6 +102,11 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Snapshot voice secret references and inspect previous draft failures
+        run: node scripts/verify-voice-release.mjs before "$RUNNER_TEMP/claimflow-voice-refs.json"
+
       - id: deploy
         name: Build from source and deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v3
@@ -141,3 +146,6 @@ jobs:
           curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/ready"
           curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/" > /dev/null
           echo "ClaimFlow deployed: $SERVICE_URL"
+
+      - name: Verify stable URL and preserved voice secret references
+        run: node scripts/verify-voice-release.mjs after "$RUNNER_TEMP/claimflow-voice-refs.json"
