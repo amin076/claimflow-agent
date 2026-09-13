@@ -23,7 +23,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check . || (prettier --write apps/api/src/extraction/validation.ts apps/web/src/components/ExtractedFieldList.tsx && git diff -- apps/api/src/extraction/validation.ts apps/web/src/components/ExtractedFieldList.tsx && false)"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
