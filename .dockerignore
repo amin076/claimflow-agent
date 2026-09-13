@@ -8,6 +8,7 @@ node_modules
 *.key
 *.pem
 **/service-account*.json
+gha-creds-*.json
 uploads
 coverage
 sample-data/private
