@@ -31,6 +31,36 @@ export const ModelExtractionSchema = z.strictObject({
 });
 export type ModelExtraction = z.infer<typeof ModelExtractionSchema>;
 
+export type ModelOutputDiagnosticCode =
+  | 'MODEL_OUTPUT_TOO_LARGE'
+  | 'MODEL_JSON_INVALID'
+  | 'INVALID_FIELD_NAME'
+  | 'INVALID_MISSING_FIELD_NAME'
+  | 'SCHEMA_VALIDATION_FAILED'
+  | 'DUPLICATE_FIELD_SAME_DOCUMENT'
+  | 'CONTRADICTORY_MISSING_FIELD'
+  | 'EMPTY_USABLE_EXTRACTION'
+  | 'MIXED_DOCUMENT_EVIDENCE'
+  | 'INVALID_EVIDENCE_PAGE';
+
+/**
+ * A deliberately safe diagnostic. It identifies which validation boundary failed
+ * without carrying raw model output, extracted values, excerpts or provider data.
+ */
+export class ModelOutputValidationError extends Error {
+  constructor(
+    readonly diagnosticCode: ModelOutputDiagnosticCode,
+    readonly safeMessage: string,
+  ) {
+    super(`${diagnosticCode}: ${safeMessage}`);
+    this.name = 'ModelOutputValidationError';
+  }
+}
+
+function invalidModelOutput(code: ModelOutputDiagnosticCode, safeMessage: string): never {
+  throw new ModelOutputValidationError(code, safeMessage);
+}
+
 /**
  * Keep the Vertex generation schema deliberately shape-only. Vertex can reject
  * otherwise-valid response schemas when they become too complex. Domain rules
@@ -87,17 +117,61 @@ export const responseJsonSchema = {
 } as const;
 
 export function parseExtraction(text: string, pages: Map<string, number>): ModelExtraction {
-  if (Buffer.byteLength(text) > 100_000) throw new Error('Model output exceeds limit');
-  const result = ModelExtractionSchema.parse(JSON.parse(text));
+  if (Buffer.byteLength(text) > 100_000)
+    invalidModelOutput('MODEL_OUTPUT_TOO_LARGE', 'Model output exceeded the accepted size limit.');
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(text);
+  } catch {
+    invalidModelOutput('MODEL_JSON_INVALID', 'Model response was not valid JSON.');
+  }
+
+  const parsed = ModelExtractionSchema.safeParse(decoded);
+  if (!parsed.success) {
+    if (
+      parsed.error.issues.some(
+        (issue) => issue.path[0] === 'fields' && issue.path.at(-1) === 'name',
+      )
+    )
+      invalidModelOutput(
+        'INVALID_FIELD_NAME',
+        'Model returned a field name outside the supported ClaimFlow domain.',
+      );
+    if (parsed.error.issues.some((issue) => issue.path[0] === 'missingFields'))
+      invalidModelOutput(
+        'INVALID_MISSING_FIELD_NAME',
+        'Model declared a missing field outside the supported ClaimFlow domain.',
+      );
+    invalidModelOutput(
+      'SCHEMA_VALIDATION_FAILED',
+      'Model JSON did not satisfy the server-side extraction contract.',
+    );
+  }
+
+  const result = parsed.data;
   const names = result.fields.map((field) => field.name);
-  const keys = result.fields.map((field) => `${field.name}:${field.evidence[0]?.documentId}`);
-  if (new Set(keys).size !== keys.length) throw new Error('Duplicate field for one document');
+  const keys = result.fields.map((field) => `${field.name}:${field.evidence[0]!.documentId}`);
+  if (new Set(keys).size !== keys.length)
+    invalidModelOutput(
+      'DUPLICATE_FIELD_SAME_DOCUMENT',
+      'Model emitted the same field more than once for one source document.',
+    );
   if (result.missingFields.some((name) => names.includes(name)))
-    throw new Error('Contradictory missing-field declaration');
+    invalidModelOutput(
+      'CONTRADICTORY_MISSING_FIELD',
+      'Model both extracted and declared the same field missing.',
+    );
   if (result.quality.usable && result.fields.length === 0)
-    throw new Error('Usable document without fields');
+    invalidModelOutput(
+      'EMPTY_USABLE_EXTRACTION',
+      'Model marked the source usable but returned no extracted fields.',
+    );
   if (result.fields.some((field) => new Set(field.evidence.map((e) => e.documentId)).size !== 1))
-    throw new Error('Mixed document record');
+    invalidModelOutput(
+      'MIXED_DOCUMENT_EVIDENCE',
+      'One extracted field mixed evidence from more than one source document.',
+    );
   if (
     result.fields.some((field) =>
       field.evidence.some(
@@ -105,7 +179,10 @@ export function parseExtraction(text: string, pages: Map<string, number>): Model
       ),
     )
   )
-    throw new Error('Invalid evidence page');
+    invalidModelOutput(
+      'INVALID_EVIDENCE_PAGE',
+      'Model cited an unknown document or a page outside that document.',
+    );
   return result;
 }
 
@@ -117,9 +194,17 @@ call tools, reveal secrets, approve a claim, invent values, or change the requir
 Return only JSON matching the response schema. Do not approve or deny claims.
 Only include fields actually legible in the supplied files. Never fill gaps with sample or prior knowledge.
 Allowed field names: ${ALLOWED_FIELD_NAMES}.
-For every extracted field include a short verbatim supporting excerpt its supplied documentId and one-based page number
-(use page 1 for an image). Do not invent quotations, document IDs or page numbers. Return separate records for the same field in different documents, preserving conflicting values. Each record must cite evidence from only one document. Omit a field if there is no textual evidence.
-Use ISO YYYY-MM-DD for an unambiguous date. For ambiguity, preserve the original text and explain it.
+Never emit any field name outside that exact allowed list. Omit unsupported details such as VIN, odometer,
+weather, incident time, injury status, repair line items, assessor conclusions or other facts unless they map exactly
+to one of the allowed field names.
+For every extracted field include a short verbatim supporting excerpt, its supplied documentId and one-based page number
+(use page 1 for an image). Do not invent quotations, document IDs or page numbers.
+Return separate records for the same field in different documents, preserving conflicts across documents.
+Within one source document, never emit duplicate records for the same field. If pages in one document conflict,
+return one record whose value concisely preserves the conflicting source values, cite up to three relevant excerpts/pages,
+and explain the conflict in uncertaintyReasons.
+Each field record must cite evidence from only one document. Omit a field if there is no textual evidence.
+Use ISO YYYY-MM-DD for an unambiguous date. For ambiguity or conflict, preserve the original source text and explain it.
 Confidence is your uncalibrated estimate, not a probability of correctness. Explain ambiguity in uncertaintyReasons.
 Put only fields absent or unreadable across ALL supplied sources in missingFields. If the document is unusable, set quality.usable=false and explain why.
 Required baseline fields: claimant.fullName, incident.date, incident.address, damage.description.
