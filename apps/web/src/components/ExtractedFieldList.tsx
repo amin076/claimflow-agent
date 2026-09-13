@@ -227,9 +227,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                 {field.uncertaintyReasons
                   .filter(
                     (reason) =>
-                      !(
-                        resolvedConflict && reason.startsWith('Conflicting source values:')
-                      ),
+                      !(resolvedConflict && reason.startsWith('Conflicting source values:')),
                   )
                   .map((reason) => (
                     <Typography key={reason} variant="body2" color="warning.dark" sx={{ mt: 1 }}>
@@ -238,8 +236,8 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                   ))}
                 {resolvedConflict && (
                   <Typography variant="body2" color="success.dark" sx={{ mt: 1, fontWeight: 700 }}>
-                    Original source conflict retained in the evidence history. The canonical value was
-                    resolved by human review.
+                    Original source conflict retained in the evidence history. The canonical value
+                    was resolved by human review.
                   </Typography>
                 )}
                 {conflicted && (
