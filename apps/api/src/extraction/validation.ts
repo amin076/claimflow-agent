@@ -26,11 +26,7 @@ const sameDocumentScalarConflict = (name: ClaimFieldName, value: string, evidenc
     return unique(value.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? []);
   }
   if (name === 'damage.estimatedAmount') {
-    return unique(
-      [...value.matchAll(/(?:AUD\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/gi)].map(
-        (match) => match[1]!.replace(/,/g, ''),
-      ),
-    );
+    return unique((value.match(/\b\d[\d,]*(?:\.\d{1,2})?\b/g) ?? []).map((amount) => amount.replace(/,/g, '')));
   }
   return [];
 };
