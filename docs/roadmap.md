@@ -313,3 +313,7 @@ Never cut from the final demo:
 - auditability;
 - deployed application;
 - clear disclosure of limitations.
+
+## Authorized extension — voice clarification
+
+The new mission explicitly brings ElevenLabs clarification into scope, superseding its earlier deferral above. Implemented on the feature branch: question drafting/approval, outbound provider, signed post-call responses, persisted evidence, human correction and audit. See [configuration and acceptance](./elevenlabs-clarification.md). Live verification is pending operator setup and a real synthetic call; this is not yet a verified production milestone.

@@ -30,6 +30,13 @@ export class InMemoryCaseRepository {
     return cloneCase(next);
   }
 
+  findConversation(conversationId: string): ClaimCase | undefined {
+    const matches = [...this.#cases.values()].filter((claim) =>
+      claim.clarifications?.some((item) => item.externalConversationId === conversationId),
+    );
+    return matches.length === 1 ? cloneCase(matches[0]!) : undefined;
+  }
+
   list(): ClaimCase[] {
     return [...this.#cases.values()]
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))

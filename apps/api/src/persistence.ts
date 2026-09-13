@@ -16,6 +16,7 @@ type MaybePromise<T> = T | Promise<T>;
 export interface CaseRepository {
   update(id: string, change: (claim: ClaimCase) => ClaimCase): MaybePromise<ClaimCase | undefined>;
   list(): MaybePromise<ClaimCase[]>;
+  findConversation(conversationId: string): MaybePromise<ClaimCase | undefined>;
   get(id: string): MaybePromise<ClaimCase | undefined>;
   create(input: CreateCaseInput): MaybePromise<ClaimCase>;
   addDocument(
@@ -38,7 +39,13 @@ export function encodeCase(claim: ClaimCase) {
       'This demo case has reached its history limit. Create a new case.',
     );
   }
-  return { payload, updatedAt: claim.updatedAt };
+  return {
+    payload,
+    updatedAt: claim.updatedAt,
+    conversationIds: (claim.clarifications ?? []).flatMap((item) =>
+      item.externalConversationId ? [item.externalConversationId] : [],
+    ),
+  };
 }
 const decodeCase = (data: { payload?: unknown } | undefined) => {
   if (!data) return undefined;
@@ -55,6 +62,14 @@ export class FirestoreCaseRepository implements CaseRepository {
       .limit(100)
       .get();
     return snapshot.docs.map((doc) => decodeCase(doc.data())!);
+  }
+  async findConversation(conversationId: string) {
+    const snapshot = await this.db
+      .collection('cases')
+      .where('conversationIds', 'array-contains', conversationId)
+      .limit(2)
+      .get();
+    return snapshot.size === 1 ? decodeCase(snapshot.docs[0]!.data()) : undefined;
   }
   async get(id: string) {
     return decodeCase((await this.db.collection('cases').doc(id).get()).data());

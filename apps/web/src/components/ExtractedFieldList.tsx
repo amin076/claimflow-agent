@@ -206,9 +206,15 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                       <Button
                         size="small"
                         component="a"
-                        href={`/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(item.documentId)}/content`}
+                        href={
+                          item.clarificationResponseId
+                            ? `#${item.clarificationResponseId}`
+                            : `/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(item.documentId ?? '')}/content`
+                        }
                       >
-                        Source · page {item.page ?? 1}
+                        {item.clarificationResponseId
+                          ? 'Clarification transcript'
+                          : `Source · page ${item.page ?? 1}`}
                       </Button>
                     </Box>
                   ))}

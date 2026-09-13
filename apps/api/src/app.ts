@@ -1,3 +1,4 @@
+import { clarificationRoutes, authorizeVoice } from './clarification/routes.js';
 import cors from '@fastify/cors';
 import {
   AddDocumentInputSchema,
@@ -47,6 +48,8 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
     app.log.error(error);
     return reply.status(500).send({ error: 'INTERNAL_ERROR', message: 'Unexpected server error.' });
   });
+
+  await clarificationRoutes(app, runtime);
 
   app.get('/health', async () => ({ status: 'ok', service: 'claimflow-api' }));
   app.get('/api/config', async () => ({
@@ -113,6 +116,7 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
   app.patch<{ Params: { id: string } }>('/api/cases/:id/review', async (request, reply) => {
     const id = IdentifierSchema.regex(/^[a-zA-Z0-9_-]+$/).parse(request.params.id);
     const input = ReviewCaseInputSchema.parse(request.body);
+    if (input.clarificationResponseId) authorizeVoice(request, runtime);
     const claim = await cases.review(id, input);
     return claim ?? reply.status(404).send({ error: 'CASE_NOT_FOUND' });
   });

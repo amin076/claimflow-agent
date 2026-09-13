@@ -9,6 +9,7 @@ export const ReviewDecisionSchema = z
     reviewerId: IdentifierSchema,
     action: z.enum(['ACCEPT', 'CORRECT', 'REJECT', 'ESCALATE', 'REQUEST_INPUT']),
     fieldName: ClaimFieldNameSchema.optional(),
+    clarificationResponseId: IdentifierSchema.optional(),
     previousValue: ExtractedValueSchema.optional(),
     correctedValue: ExtractedValueSchema.optional(),
     reason: z.string().trim().min(1).max(2_000),

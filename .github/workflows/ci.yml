@@ -110,7 +110,7 @@ jobs:
           region: australia-southeast1
           service: claimflow-api
           source: .
-          env_vars_update_strategy: overwrite
+          env_vars_update_strategy: merge
           env_vars: |-
             NODE_ENV=production
             SERVE_WEB=true

@@ -1,3 +1,4 @@
+import { ClarificationPanel } from '../components/ClarificationPanel.js';
 import {
   Alert,
   Box,
@@ -374,6 +375,7 @@ export const CaseWorkspacePage = () => {
                   busy={busy || selected.status === 'PROCESSING'}
                   onRoute={(action) => review(action)}
                 />
+                <ClarificationPanel key={selected.id} claim={selected} busy={busy} run={run} />
                 <AuditTimeline events={selected.auditEvents} />
                 <Divider />
                 <Typography variant="body2" color="text.secondary">
