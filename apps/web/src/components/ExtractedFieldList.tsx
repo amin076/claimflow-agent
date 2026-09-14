@@ -2,7 +2,6 @@ import {
   Box,
   Button,
   Chip,
-  Divider,
   InputAdornment,
   LinearProgress,
   Paper,
@@ -35,7 +34,7 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('ALL');
 
   const needsReviewCount = useMemo(
-    () => fields.filter((f) => f.requiresReview || f.confidence < 0.8).length,
+    () => fields.filter((field) => field.requiresReview || field.confidence < 0.8).length,
     [fields],
   );
 
@@ -44,19 +43,15 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
       if (activeFilter === 'NEEDS_REVIEW' && !(field.requiresReview || field.confidence < 0.8)) {
         return false;
       }
-      if (activeFilter === 'ACCEPTED' && field.status !== 'ACCEPTED') {
-        return false;
-      }
-      if (activeFilter === 'PROPOSED' && field.status !== 'PROPOSED') {
-        return false;
-      }
+      if (activeFilter === 'ACCEPTED' && field.status !== 'ACCEPTED') return false;
+      if (activeFilter === 'PROPOSED' && field.status !== 'PROPOSED') return false;
 
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesName = field.name.toLowerCase().includes(query);
         const matchesValue = field.displayValue.toLowerCase().includes(query);
-        const matchesEvidence = field.evidence.some((ev) =>
-          ev.excerpt?.toLowerCase().includes(query),
+        const matchesEvidence = field.evidence.some((evidence) =>
+          evidence.excerpt?.toLowerCase().includes(query),
         );
         return matchesName || matchesValue || matchesEvidence;
       }
@@ -66,73 +61,76 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
   }, [fields, activeFilter, searchQuery]);
 
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-      <Stack spacing={2} sx={{ mb: 2 }}>
-        <Typography variant="h6" component="h3" sx={{ fontWeight: 750 }}>
-          Extracted fields
-        </Typography>
+    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 3.5 }}>
+      <Stack spacing={2.25} sx={{ mb: 2.25 }}>
+        <Box>
+          <Typography variant="h6" component="h3">
+            Extracted fields
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
+            Verify model proposals against their linked source evidence before taking action.
+          </Typography>
+        </Box>
 
         {fields.length > 0 && (
-          <Stack spacing={1.5}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1.5}
-              sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' } }}
-            >
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
-                <Chip
-                  label={`All (${fields.length})`}
-                  size="small"
-                  clickable
-                  color={activeFilter === 'ALL' ? 'primary' : 'default'}
-                  variant={activeFilter === 'ALL' ? 'filled' : 'outlined'}
-                  onClick={() => setActiveFilter('ALL')}
-                />
-                <Chip
-                  label={`Needs Review (${needsReviewCount})`}
-                  size="small"
-                  clickable
-                  color={activeFilter === 'NEEDS_REVIEW' ? 'warning' : 'default'}
-                  variant={activeFilter === 'NEEDS_REVIEW' ? 'filled' : 'outlined'}
-                  onClick={() => setActiveFilter('NEEDS_REVIEW')}
-                />
-                <Chip
-                  label="Accepted"
-                  size="small"
-                  clickable
-                  color={activeFilter === 'ACCEPTED' ? 'success' : 'default'}
-                  variant={activeFilter === 'ACCEPTED' ? 'filled' : 'outlined'}
-                  onClick={() => setActiveFilter('ACCEPTED')}
-                />
-                <Chip
-                  label="Proposed"
-                  size="small"
-                  clickable
-                  color={activeFilter === 'PROPOSED' ? 'info' : 'default'}
-                  variant={activeFilter === 'PROPOSED' ? 'filled' : 'outlined'}
-                  onClick={() => setActiveFilter('PROPOSED')}
-                />
-              </Box>
-
-              <TextField
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            sx={{ justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'center' } }}
+          >
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+              <Chip
+                label={`All ${fields.length}`}
                 size="small"
-                placeholder="Search fields or evidence…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ minWidth: { xs: '100%', sm: 220 } }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Box component="span" sx={{ fontSize: '0.9rem' }}>
-                          🔍
-                        </Box>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
+                clickable
+                color={activeFilter === 'ALL' ? 'primary' : 'default'}
+                variant={activeFilter === 'ALL' ? 'filled' : 'outlined'}
+                onClick={() => setActiveFilter('ALL')}
               />
-            </Stack>
+              <Chip
+                label={`Needs review ${needsReviewCount}`}
+                size="small"
+                clickable
+                color={activeFilter === 'NEEDS_REVIEW' ? 'warning' : 'default'}
+                variant={activeFilter === 'NEEDS_REVIEW' ? 'filled' : 'outlined'}
+                onClick={() => setActiveFilter('NEEDS_REVIEW')}
+              />
+              <Chip
+                label="Accepted"
+                size="small"
+                clickable
+                color={activeFilter === 'ACCEPTED' ? 'success' : 'default'}
+                variant={activeFilter === 'ACCEPTED' ? 'filled' : 'outlined'}
+                onClick={() => setActiveFilter('ACCEPTED')}
+              />
+              <Chip
+                label="Proposed"
+                size="small"
+                clickable
+                color={activeFilter === 'PROPOSED' ? 'info' : 'default'}
+                variant={activeFilter === 'PROPOSED' ? 'filled' : 'outlined'}
+                onClick={() => setActiveFilter('PROPOSED')}
+              />
+            </Box>
+
+            <TextField
+              size="small"
+              placeholder="Search fields or evidence"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              sx={{ minWidth: { xs: '100%', md: 250 } }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Box component="span" sx={{ color: 'text.secondary', fontWeight: 800 }}>
+                        ⌕
+                      </Box>
+                    </InputAdornment>
+                  ),
+                },
+              }}
+            />
           </Stack>
         )}
       </Stack>
@@ -157,15 +155,28 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
           </Button>
         </Box>
       ) : (
-        <Stack spacing={2.5} divider={<Divider flexItem />}>
+        <Stack spacing={1.5}>
           {filteredFields.map((field) => {
             const percent = Math.round(field.confidence * 100);
             const historicalConflict = hasConflict(field);
             const conflicted = historicalConflict && field.status !== 'CORRECTED';
             const resolvedConflict = historicalConflict && field.status === 'CORRECTED';
             const correction = corrections[field.id] ?? (conflicted ? '' : field.displayValue);
+            const surface = resolvedConflict ? '#fbfefd' : conflicted ? '#fffdfb' : '#ffffff';
+            const border = resolvedConflict ? '#d8ebe2' : conflicted ? '#f1dfcf' : '#e6edf1';
+
             return (
-              <Box key={field.id}>
+              <Box
+                key={field.id}
+                sx={{
+                  p: { xs: 1.75, md: 2 },
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: border,
+                  bgcolor: surface,
+                  boxShadow: '0 6px 18px rgba(25, 54, 72, .035)',
+                }}
+              >
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={1}
@@ -179,17 +190,31 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                     spacing={1}
                     sx={{ alignItems: 'center', flexWrap: 'wrap' }}
                   >
-                    <Typography sx={{ fontWeight: 750 }}>{field.name}</Typography>
+                    <Typography sx={{ fontWeight: 820 }}>{field.name}</Typography>
                     {conflicted && <Chip label="Conflict detected" size="small" color="error" />}
                     {resolvedConflict && (
                       <Chip label="Resolved by human" size="small" color="success" />
                     )}
+                    {!historicalConflict && field.status === 'ACCEPTED' && (
+                      <Chip label="Reviewed" size="small" color="success" variant="outlined" />
+                    )}
                   </Stack>
-                  <Typography color={field.requiresReview ? 'warning.main' : 'success.main'}>
-                    {percent}% model estimate
-                  </Typography>
+                  <Box sx={{ minWidth: { sm: 150 }, textAlign: { sm: 'right' } }}>
+                    <Typography
+                      sx={{
+                        fontWeight: 820,
+                        color: field.requiresReview ? 'warning.dark' : 'success.dark',
+                      }}
+                    >
+                      {percent}%
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Model estimate
+                    </Typography>
+                  </Box>
                 </Stack>
-                <Typography variant="h6" sx={{ mt: 0.5 }}>
+
+                <Typography variant="h6" sx={{ mt: 0.6, fontSize: '1.22rem' }}>
                   {field.displayValue}
                 </Typography>
                 <LinearProgress
@@ -197,33 +222,56 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                   variant="determinate"
                   value={percent}
                   color={field.requiresReview ? 'warning' : 'success'}
-                  sx={{ my: 1.25, height: 6, borderRadius: 3 }}
+                  sx={{ my: 1.3 }}
                 />
-                <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1.5 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 800 }}>
-                    SOURCE EVIDENCE
-                  </Typography>
-                  {field.evidence.map((item) => (
-                    <Box key={item.id} sx={{ mt: 1 }}>
-                      <Typography variant="body2">
-                        {item.excerpt ?? 'No excerpt supplied.'}
-                      </Typography>
-                      <Button
-                        size="small"
-                        component="a"
-                        href={
-                          item.clarificationResponseId
-                            ? `#${item.clarificationResponseId}`
-                            : `/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(item.documentId ?? '')}/content`
-                        }
-                      >
-                        {item.clarificationResponseId
-                          ? 'Clarification transcript'
-                          : `Source · page ${item.page ?? 1}`}
-                      </Button>
+
+                {field.evidence.length > 0 && (
+                  <Box sx={{ mt: 1.35 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 820, color: 'text.secondary' }}>
+                      SOURCE EVIDENCE
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: 1,
+                        mt: 0.8,
+                      }}
+                    >
+                      {field.evidence.map((item) => (
+                        <Box
+                          key={item.id}
+                          sx={{
+                            p: 1.4,
+                            borderRadius: 2.25,
+                            bgcolor: item.clarificationResponseId ? '#f3f8ff' : '#f7fafb',
+                            border: '1px solid',
+                            borderColor: item.clarificationResponseId ? '#d8e8f8' : '#e4ecef',
+                          }}
+                        >
+                          <Typography variant="body2">
+                            {item.excerpt ?? 'No excerpt supplied.'}
+                          </Typography>
+                          <Button
+                            size="small"
+                            component="a"
+                            sx={{ px: 0, minHeight: 30, mt: 0.35 }}
+                            href={
+                              item.clarificationResponseId
+                                ? `#${item.clarificationResponseId}`
+                                : `/api/cases/${encodeURIComponent(caseId)}/documents/${encodeURIComponent(item.documentId ?? '')}/content`
+                            }
+                          >
+                            {item.clarificationResponseId
+                              ? 'Clarification transcript'
+                              : `Source · page ${item.page ?? 1}`}
+                          </Button>
+                        </Box>
+                      ))}
                     </Box>
-                  ))}
-                </Box>
+                  </Box>
+                )}
+
                 {field.uncertaintyReasons
                   .filter(
                     (reason) =>
@@ -234,22 +282,36 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                       {reason}
                     </Typography>
                   ))}
+
                 {resolvedConflict && (
-                  <Typography variant="body2" color="success.dark" sx={{ mt: 1, fontWeight: 700 }}>
-                    Original source conflict retained in the evidence history. The canonical value
-                    was resolved by human review.
-                  </Typography>
+                  <Box
+                    sx={{
+                      mt: 1.25,
+                      px: 1.35,
+                      py: 1,
+                      borderRadius: 2,
+                      bgcolor: '#edf8f2',
+                      border: '1px solid #d9ede3',
+                    }}
+                  >
+                    <Typography variant="body2" color="success.dark" sx={{ fontWeight: 720 }}>
+                      Original source conflict retained in evidence history. The canonical value was
+                      resolved by human review.
+                    </Typography>
+                  </Box>
                 )}
+
                 {conflicted && (
-                  <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 700 }}>
+                  <Typography variant="body2" color="error.main" sx={{ mt: 1.15, fontWeight: 720 }}>
                     Review the cited evidence and save one canonical value. Accepting the combined
                     AI value does not resolve this conflict.
                   </Typography>
                 )}
+
                 {(field.requiresReview ||
                   field.status === 'PROPOSED' ||
                   field.status === 'REJECTED') && (
-                  <Stack spacing={1.5} sx={{ mt: 2 }}>
+                  <Stack spacing={1.3} sx={{ mt: 1.6 }}>
                     <TextField
                       size="small"
                       label={conflicted ? 'Resolved canonical value' : 'Corrected value'}
