@@ -22,11 +22,7 @@ jobs:
       - name: Use the repository npm version
         run: npm install --global npm@11.9.0
       - run: npm ci
-      - name: Show Prettier output for UI polish
-        run: |
-          npm run format
-          git diff -- apps/web/src/components/AuditTimeline.tsx apps/web/src/components/CaseSummary.tsx apps/web/src/components/ClarificationPanel.tsx apps/web/src/components/ExtractedFieldList.tsx
-          exit 1
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
