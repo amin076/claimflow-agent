@@ -92,10 +92,6 @@ const theme = createTheme({
           borderColor: 'rgba(58, 89, 116, .10)',
           alignItems: 'center',
         },
-        standardInfo: { backgroundColor: '#eaf4ff', color: '#194f82' },
-        standardSuccess: { backgroundColor: '#e7f6ef', color: '#155f40' },
-        standardWarning: { backgroundColor: '#fff4e6', color: '#884707' },
-        standardError: { backgroundColor: '#fff0f1', color: '#8e3038' },
       },
     },
     MuiOutlinedInput: {
