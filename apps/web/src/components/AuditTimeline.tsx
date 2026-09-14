@@ -3,10 +3,7 @@ import type { AuditEvent } from '@claimflow/domain';
 
 export const AuditTimeline = ({ events }: { events: AuditEvent[] }) => (
   <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 3.5 }}>
-    <Stack
-      direction="row"
-      sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2.25 }}
-    >
+    <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2.25 }}>
       <Box>
         <Typography variant="h6" component="h3">
           Audit timeline
