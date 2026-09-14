@@ -2,7 +2,15 @@ import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import type { ClaimCase } from '@claimflow/domain';
 import { StatusChip } from './StatusChip.js';
 
-const Metric = ({ value, label, tone }: { value: string | number; label: string; tone: string }) => (
+const Metric = ({
+  value,
+  label,
+  tone,
+}: {
+  value: string | number;
+  label: string;
+  tone: string;
+}) => (
   <Box
     sx={{
       minWidth: 110,
@@ -81,16 +89,27 @@ export const CaseSummary = ({ claim }: { claim: ClaimCase }) => {
             >
               {claim.reference}
             </Typography>
-            <Typography variant="h4" component="h2" sx={{ fontSize: { xs: '1.65rem', md: '2rem' } }}>
+            <Typography
+              variant="h4"
+              component="h2"
+              sx={{ fontSize: { xs: '1.65rem', md: '2rem' } }}
+            >
               {claim.title}
             </Typography>
             <Stack direction="row" spacing={0.8} sx={{ mt: 0.9, flexWrap: 'wrap', rowGap: 0.6 }}>
-              <Chip label={`${claim.documents.length} document${claim.documents.length === 1 ? '' : 's'}`} size="small" variant="outlined" />
+              <Chip
+                label={`${claim.documents.length} document${claim.documents.length === 1 ? '' : 's'}`}
+                size="small"
+                variant="outlined"
+              />
               <Chip label={`${claim.fields.length} fields`} size="small" variant="outlined" />
               <Chip
                 label={`${openIssues} open issue${openIssues === 1 ? '' : 's'}`}
                 size="small"
-                sx={{ bgcolor: openIssues ? '#fff2e4' : '#e7f5ee', color: openIssues ? '#ad5509' : '#176844' }}
+                sx={{
+                  bgcolor: openIssues ? '#fff2e4' : '#e7f5ee',
+                  color: openIssues ? '#ad5509' : '#176844',
+                }}
               />
             </Stack>
           </Box>
