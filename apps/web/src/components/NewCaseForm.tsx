@@ -4,9 +4,9 @@ import { useState, type FormEvent } from 'react';
 type Props = { busy: boolean; onCreate: (title: string) => Promise<void> };
 
 const DEMO_PRESETS = [
-  { label: 'Motor Claim (Maya Rivera)', title: 'Synthetic motor claim — Maya Rivera' },
-  { label: 'Water Damage Incident', title: 'Synthetic water-damage restoration case' },
-  { label: 'Storm & Roof Repair', title: 'Synthetic storm damage invoice verification' },
+  { label: 'Motor Claim', title: 'Synthetic motor claim — Maya Rivera' },
+  { label: 'Water Damage', title: 'Synthetic water-damage restoration case' },
+  { label: 'Storm & Roof', title: 'Synthetic storm damage invoice verification' },
   { label: 'Property Damage', title: 'Synthetic commercial property claim' },
 ];
 
@@ -18,30 +18,48 @@ export const NewCaseForm = ({ busy, onCreate }: Props) => {
     if (title.trim()) await onCreate(title.trim());
   };
 
-  const handleSelectPreset = (presetTitle: string) => {
-    setTitle(presetTitle);
-  };
-
   return (
-    <Paper component="form" onSubmit={submit} variant="outlined" sx={{ p: 2.5 }}>
-      <Stack spacing={2}>
-        <Typography variant="h6" component="h2" sx={{ fontWeight: 750 }}>
-          New synthetic case
-        </Typography>
+    <Paper
+      component="form"
+      onSubmit={submit}
+      variant="outlined"
+      sx={{ p: 2.5, borderRadius: 3.5, overflow: 'hidden', position: 'relative' }}
+    >
+      <Box
+        aria-hidden="true"
+        sx={{
+          position: 'absolute',
+          width: 120,
+          height: 120,
+          right: -45,
+          top: -55,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(33, 184, 175, .13), transparent 70%)',
+        }}
+      />
+      <Stack spacing={1.75} sx={{ position: 'relative' }}>
+        <Box>
+          <Typography variant="h6" component="h2">
+            New synthetic case
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
+            Start from a demo preset or name your own synthetic case.
+          </Typography>
+        </Box>
 
-        <Alert severity="info">
-          Demo environment only. Do not enter real customer information.
+        <Alert severity="info" sx={{ py: 0.25 }}>
+          Synthetic data only — do not enter real customer information.
         </Alert>
 
         <Box>
           <Typography
             variant="caption"
             color="text.secondary"
-            sx={{ display: 'block', mb: 1, fontWeight: 600 }}
+            sx={{ display: 'block', mb: 0.85, fontWeight: 800 }}
           >
-            Quick presets for live demo:
+            QUICK PRESETS
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.7 }}>
             {DEMO_PRESETS.map((preset) => {
               const isSelected = title === preset.title;
               return (
@@ -53,7 +71,7 @@ export const NewCaseForm = ({ busy, onCreate }: Props) => {
                   disabled={busy}
                   color={isSelected ? 'primary' : 'default'}
                   variant={isSelected ? 'filled' : 'outlined'}
-                  onClick={() => handleSelectPreset(preset.title)}
+                  onClick={() => setTitle(preset.title)}
                 />
               );
             })}
@@ -62,6 +80,7 @@ export const NewCaseForm = ({ busy, onCreate }: Props) => {
 
         <TextField
           label="Case title"
+          size="small"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           slotProps={{ htmlInput: { maxLength: 200 } }}
@@ -70,8 +89,8 @@ export const NewCaseForm = ({ busy, onCreate }: Props) => {
           disabled={busy}
         />
 
-        <Button type="submit" variant="contained" disabled={busy || !title.trim()}>
-          {busy ? 'Creating…' : 'Create case'}
+        <Button type="submit" variant="contained" disabled={busy || !title.trim()} fullWidth>
+          {busy ? 'Creating…' : 'Create synthetic case'}
         </Button>
       </Stack>
     </Paper>
