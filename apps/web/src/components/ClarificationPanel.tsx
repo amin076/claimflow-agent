@@ -382,7 +382,11 @@ export function ClarificationPanel(props: Props) {
             <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>
               AVAILABLE CLARIFICATIONS
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 1 }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ mt: 1, flexWrap: 'wrap', rowGap: 1 }}
+            >
               {issues.flatMap((issue) =>
                 issue.fieldNames.map((fieldName) => (
                   <Button
