@@ -6,13 +6,15 @@
 [![Hackathon](https://img.shields.io/badge/Forward-AI%20in%20Business-purple)](#hackathon-scope)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-**Live application:** https://claimflow-api-vb6ijwpumq-ts.a.run.app
+**Live application:** https://claimflow-api-vb6ijwpumq-ts.a.run.app  
+**Official demo video:** https://youtu.be/IKTonD5LaFc  
+**Hackathon track:** **Improve Existing Business Capability**
 
 ## Overview
 
 ClaimFlow AI is an agentic document-intelligence workflow for claims, restoration, field-service, and other document-heavy operations. It turns mixed-quality PDFs, photos, forms, notes, and email-style inputs into a structured case while preserving source evidence, uncertainty, deterministic business rules, and human control.
 
-The system does more than transcribe text. It links extracted facts to source pages, detects missing or conflicting information, routes uncertainty to a reviewer, and records both agent activity and human decisions in an audit trail. When a contradiction cannot be resolved from the supplied documents, a protected reviewer can approve an exact clarification question and explicitly start an ElevenLabs/Twilio call to a configured synthetic test participant. The signed transcript returns as evidence, but the case is not changed until a human saves the canonical correction.
+The working hackathon prototype was built in **two days**. The system does more than transcribe text: it links extracted facts to source pages, detects missing or conflicting information, routes uncertainty to a reviewer, and records both agent activity and human decisions in an audit trail. When a contradiction cannot be resolved from the supplied documents, a protected reviewer can approve an exact clarification question and explicitly start an ElevenLabs/Twilio call to a configured synthetic test participant. The signed transcript returns as evidence, but the case is not changed until a human saves the canonical correction.
 
 ClaimFlow is a hackathon prototype for **case preparation**. It does **not** autonomously approve or deny insurance claims.
 
@@ -177,38 +179,40 @@ See [Phase 9 evaluation](docs/phase9-document-ai-evaluation.md).
 
 **Submission-ready hackathon MVP, live verified in production.**
 
-| Phase                                                                  | Status                                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete                                                         |
-| 6 — Gemini multimodal extraction                                       | ✅ Live verified                                                    |
-| 7 — ADK agent workflow                                                 | ✅ Live verified                                                    |
-| 8 — deterministic rules and human review                               | ✅ Live verified and conflict-hardened                              |
-| 9 — Document AI evaluation                                             | ✅ Complete; deferred by evidence                                   |
-| 10 — CI/CD and secure deployment                                       | ✅ Complete; keyless auto-deploy verified                           |
-| 11 — observability and evaluation                                      | ✅ Complete for hackathon MVP                                       |
-| ElevenLabs voice clarification                                         | ✅ Production E2E live verified                                     |
-| 12 — demo and submission                                               | 🟢 Submission package ready; final recording/form submission remain |
+| Phase                                                                  | Status                                              |
+| ---------------------------------------------------------------------- | --------------------------------------------------- |
+| 0–5 — scope, foundations, domain, local flow, Google Cloud persistence | ✅ Complete                                         |
+| 6 — Gemini multimodal extraction                                       | ✅ Live verified                                    |
+| 7 — ADK agent workflow                                                 | ✅ Live verified                                    |
+| 8 — deterministic rules and human review                               | ✅ Live verified and conflict-hardened              |
+| 9 — Document AI evaluation                                             | ✅ Complete; deferred by evidence                   |
+| 10 — CI/CD and secure deployment                                       | ✅ Complete; keyless auto-deploy verified           |
+| 11 — observability and evaluation                                      | ✅ Complete for hackathon MVP                       |
+| ElevenLabs voice clarification                                         | ✅ Production E2E live verified                     |
+| 12 — demo and submission                                               | ✅ Demo published; submission form in progress      |
 
 ### Latest verified release evidence
 
-Voice integration baseline before final submission cleanup:
+Final submission release:
 
-- merge commit `adf9664a0b3b11c9948cb6ffa3236ec1c83598a9`;
-- GitHub Actions CI run `#66` passed quality, Firestore integration, container smoke, OIDC authentication, Cloud Run deployment, stable URL health/readiness, and voice secret-reference preservation;
-- Cloud Run revision `claimflow-api-00018-7c5` served the live voice acceptance run;
-- the production `incident.date` clarification completed through real outbound call, signed transcript return, human canonical correction, and `RESOLVED` state.
+- final UI/submission merge commit `62d036df276175a55bc9475ebca8fb73be438e72`;
+- GitHub Actions CI run `#82` passed formatting, lint, typecheck, tests, build, Firestore integration, container smoke, OIDC authentication, Cloud Run deployment, public health/readiness checks, and voice secret-reference preservation;
+- the production voice acceptance demonstrated a real outbound ElevenLabs/Twilio clarification call, signed transcript return, human canonical correction, and `RESOLVED` state;
+- the final demo video is published at https://youtu.be/IKTonD5LaFc.
 
 See [Phase 11 evaluation closeout](docs/phase11-evaluation-closeout.md), [Phase 12 submission runbook](docs/phase12-submission-runbook.md), and [ElevenLabs live acceptance](docs/elevenlabs-live-acceptance.md).
 
 ## Hackathon scope
 
-ClaimFlow is built for **Forward: AI in Business** with the primary positioning:
+ClaimFlow is built for **Forward: AI in Business** with the submission track:
 
-**Improve an Existing Business Capability** — reduce manual document reconciliation while keeping source evidence and human control visible.
+**Improve Existing Business Capability** — reduce manual document reconciliation while keeping source evidence and human control visible.
 
 The strongest sponsor-specific addition is the ElevenLabs clarification loop: when the documents themselves cannot settle a contradiction, a reviewer can approve a precise question, contact the configured synthetic participant by voice, receive a signed transcript, and then make the final human correction.
 
 ## Demo
+
+**Official YouTube demo:** https://youtu.be/IKTonD5LaFc
 
 The official demo uses a five-page synthetic motor-claim packet. The strongest sequence is:
 
