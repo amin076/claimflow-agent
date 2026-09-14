@@ -185,7 +185,11 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
                     alignItems: { xs: 'flex-start', sm: 'center' },
                   }}
                 >
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+                  >
                     <Typography sx={{ fontWeight: 820 }}>{field.name}</Typography>
                     {conflicted && <Chip label="Conflict detected" size="small" color="error" />}
                     {resolvedConflict && (
@@ -299,8 +303,8 @@ export const ExtractedFieldList = ({ caseId, fields, busy, onReview }: Props) =>
 
                 {conflicted && (
                   <Typography variant="body2" color="error.main" sx={{ mt: 1.15, fontWeight: 720 }}>
-                    Review the cited evidence and save one canonical value. Accepting the combined AI
-                    value does not resolve this conflict.
+                    Review the cited evidence and save one canonical value. Accepting the combined
+                    AI value does not resolve this conflict.
                   </Typography>
                 )}
 
