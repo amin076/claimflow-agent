@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager
+from hmac import compare_digest
 from typing import AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from rag import Retriever, build_default_retriever
@@ -34,6 +35,7 @@ def create_app(retriever: Retriever | None = None) -> FastAPI:
         "RAG_MODEL",
         "sentence-transformers/all-MiniLM-L6-v2",
     )
+    internal_token = os.getenv("RAG_INTERNAL_TOKEN")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -45,9 +47,16 @@ def create_app(retriever: Retriever | None = None) -> FastAPI:
 
     app = FastAPI(
         title="ClaimFlow RAG Lab",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
     )
+
+    def authorize(authorization: str | None) -> None:
+        if not internal_token:
+            return
+        expected = f"Bearer {internal_token}"
+        if authorization is None or not compare_digest(authorization, expected):
+            raise HTTPException(status_code=401, detail="unauthorized")
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -60,7 +69,12 @@ def create_app(retriever: Retriever | None = None) -> FastAPI:
         return {"status": "ready"}
 
     @app.post("/retrieve", response_model=RetrieveResponse)
-    async def retrieve(payload: RetrieveRequest, request: Request) -> RetrieveResponse:
+    async def retrieve(
+        payload: RetrieveRequest,
+        request: Request,
+        authorization: str | None = Header(default=None),
+    ) -> RetrieveResponse:
+        authorize(authorization)
         current: Retriever | None = getattr(request.app.state, "retriever", None)
         if current is None:
             raise HTTPException(status_code=503, detail="retriever unavailable")
