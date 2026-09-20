@@ -34,9 +34,7 @@ export async function retrieveEvidence(input: {
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(
-      `RAG_RETRIEVAL_FAILED: HTTP ${response.status}${detail ? ` ${detail}` : ''}`,
-    );
+    throw new Error(`RAG_RETRIEVAL_FAILED: HTTP ${response.status}${detail ? ` ${detail}` : ''}`);
   }
 
   return RagRetrieveResponseSchema.parse(await response.json());
