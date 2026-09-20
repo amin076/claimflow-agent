@@ -28,6 +28,19 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  rag-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/rag-python/requirements-test.txt
+      - run: python -m pip install -r services/rag-python/requirements-test.txt
+      - run: python -m pytest services/rag-python/test_rag.py
+
   firestore:
     runs-on: ubuntu-latest
     timeout-minutes: 15
