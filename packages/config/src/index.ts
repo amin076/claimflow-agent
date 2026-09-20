@@ -30,6 +30,8 @@ const EnvironmentSchema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(45000).default(40000),
   FIRESTORE_DATABASE_ID: z.string().min(1).default('(default)'),
   DOCUMENT_BUCKET: z.string().optional(),
+  RAG_SERVICE_URL: z.string().url().optional(),
+  RAG_INTERNAL_TOKEN: z.string().min(32).optional(),
   UPLOAD_DIR: z.string().default('uploads'),
   SERVE_WEB: z.enum(['true', 'false']).default('false'),
 });
@@ -55,6 +57,13 @@ export const readEnvironment = (source: NodeJS.ProcessEnv = process.env): Enviro
         code: 'custom',
         path: ['DOCUMENT_BUCKET'],
         message: 'GCS mode requires a private bucket.',
+      });
+    }
+    if (Boolean(env.RAG_SERVICE_URL) !== Boolean(env.RAG_INTERNAL_TOKEN)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['RAG_SERVICE_URL'],
+        message: 'RAG service URL and internal token must be configured together.',
       });
     }
     if (
