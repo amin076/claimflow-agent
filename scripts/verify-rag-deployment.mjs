@@ -8,17 +8,14 @@ if (!serviceUrl || !token) {
 }
 
 async function query(question, topK = 2) {
-  const response = await globalThis.fetch(
-    serviceUrl.replace(/\/$/, '') + '/api/lab/rag/query',
-    {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: 'Bearer ' + token,
-      },
-      body: JSON.stringify({ question, topK }),
+  const response = await globalThis.fetch(serviceUrl.replace(/\/$/, '') + '/api/lab/rag/query', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer ' + token,
     },
-  );
+    body: JSON.stringify({ question, topK }),
+  });
 
   const text = await response.text();
   if (!response.ok) {
