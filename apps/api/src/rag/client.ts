@@ -25,9 +25,7 @@ export async function retrieveEvidence(input: {
   fetchImpl?: typeof fetch;
 }): Promise<RagRetrieveResponse> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const baseUrl = input.baseUrl.endsWith('/')
-    ? input.baseUrl.slice(0, -1)
-    : input.baseUrl;
+  const baseUrl = input.baseUrl.endsWith('/') ? input.baseUrl.slice(0, -1) : input.baseUrl;
   const response = await fetchImpl(baseUrl + '/retrieve', {
     method: 'POST',
     headers: {
@@ -40,9 +38,7 @@ export async function retrieveEvidence(input: {
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(
-      'RAG_RETRIEVAL_FAILED: HTTP ' + response.status + (detail ? ' ' + detail : ''),
-    );
+    throw new Error('RAG_RETRIEVAL_FAILED: HTTP ' + response.status + (detail ? ' ' + detail : ''));
   }
 
   return RagRetrieveResponseSchema.parse(await response.json());
