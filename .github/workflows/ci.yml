@@ -43,7 +43,10 @@ jobs:
 
   rag-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
     env:
       HF_HUB_DISABLE_TELEMETRY: '1'
     steps:
@@ -75,6 +78,21 @@ jobs:
           node --input-type=module -e 'const r=await fetch("http://127.0.0.1:8090/retrieve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:"Have we handled previous claims where rain entered through a damaged roof?",top_k:2})});const b=await r.json();console.log(JSON.stringify(b,null,2));if(!r.ok||b.matches?.[0]?.claim_id!=="1004"||b.matches?.[1]?.claim_id!=="1001")process.exit(1)'
       - name: Verify TypeScript to Python HTTP bridge
         run: npm run rag:smoke -- --retrieval-only
+      - id: auth
+        name: Authenticate RAG acceptance test to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: claimflow-ai-agents
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - name: Verify live RAG generation with Gemini on Vertex
+        env:
+          AI_MODE: vertex
+          GOOGLE_CLOUD_PROJECT: claimflow-ai-agents
+          GOOGLE_CLOUD_LOCATION: australia-southeast1
+          VERTEX_LOCATION: global
+          GEMINI_MODEL: gemini-3.5-flash
+        run: npm run rag:live
       - if: always()
         run: cat /tmp/claimflow-rag.log
 
@@ -98,7 +116,7 @@ jobs:
       - name: Start isolated Firestore emulator
         run: |
           gcloud emulators firestore start --host-port=127.0.0.1:8089 --project=claimflow-test --quiet > /tmp/firestore.log 2>&1 &
-          node --input-type=module -e 'for(let i=0;i<60;i++){try{await fetch("http://127.0.0.1:8089");process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)'
+          node --input-type=module -e 'for(let i=0;i<60;i++){try{const r=await fetch("http://127.0.0.1:8089");if(r.ok)process.exit(0)}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)'
       - run: npm test -- apps/api/src/firestore.integration.test.ts
         env:
           FIRESTORE_EMULATOR_HOST: 127.0.0.1:8089
