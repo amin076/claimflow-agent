@@ -1,4 +1,5 @@
 import { clarificationRoutes, authorizeVoice } from './clarification/routes.js';
+import { ragLabRoutes } from './rag/routes.js';
 import cors from '@fastify/cors';
 import {
   AddDocumentInputSchema,
@@ -50,6 +51,7 @@ export const buildApp = async (runtime: Runtime = createRuntime()) => {
   });
 
   await clarificationRoutes(app, runtime);
+  await ragLabRoutes(app, runtime);
 
   app.get('/health', async () => ({ status: 'ok', service: 'claimflow-api' }));
   app.get('/api/config', async () => ({

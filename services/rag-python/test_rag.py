@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 
 import numpy as np
@@ -79,3 +80,27 @@ def test_api_retrieve_contract() -> None:
     body = response.json()
     assert body["matches"][0]["claim_id"] == "1004"
     assert body["matches"][0]["document_id"] == "claim-1004"
+
+
+def test_api_retrieve_requires_configured_token() -> None:
+    previous = os.environ.get("RAG_INTERNAL_TOKEN")
+    os.environ["RAG_INTERNAL_TOKEN"] = "x" * 64
+    try:
+        with TestClient(create_app(make_retriever())) as client:
+            denied = client.post(
+                "/retrieve",
+                json={"question": "rain through roof", "top_k": 1},
+            )
+            allowed = client.post(
+                "/retrieve",
+                headers={"Authorization": f"Bearer {'x' * 64}"},
+                json={"question": "rain through roof", "top_k": 1},
+            )
+    finally:
+        if previous is None:
+            os.environ.pop("RAG_INTERNAL_TOKEN", None)
+        else:
+            os.environ["RAG_INTERNAL_TOKEN"] = previous
+
+    assert denied.status_code == 401
+    assert allowed.status_code == 200

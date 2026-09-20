@@ -3,9 +3,11 @@ import { retrieveEvidence, type RagMatch } from './client.js';
 import { buildGroundedPrompt } from './generator.js';
 
 describe('RAG lab', () => {
-  it('validates the Python retrieval contract', async () => {
-    const fakeFetch: typeof fetch = async () =>
-      new Response(
+  it('validates the Python retrieval contract and forwards the service token', async () => {
+    let authorization: string | null = null;
+    const fakeFetch: typeof fetch = async (_input, init) => {
+      authorization = new Headers(init?.headers).get('authorization');
+      return new Response(
         JSON.stringify({
           question: 'roof damage',
           model: 'test-encoder',
@@ -20,15 +22,18 @@ describe('RAG lab', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
+    };
 
     const result = await retrieveEvidence({
       baseUrl: 'http://rag.test',
+      token: 'test-token',
       question: 'roof damage',
       topK: 1,
       fetchImpl: fakeFetch,
     });
 
     expect(result.matches[0]?.claim_id).toBe('1004');
+    expect(authorization).toBe('Bearer test-token');
   });
 
   it('builds a grounded prompt with an explicit insufficient-evidence rule', () => {
