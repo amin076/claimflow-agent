@@ -110,7 +110,7 @@ jobs:
 
   container:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -134,7 +134,7 @@ jobs:
       vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
       vars.GCP_DEPLOY_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     concurrency:
       group: claimflow-production-deploy
       cancel-in-progress: false
@@ -167,38 +167,6 @@ jobs:
           echo "::add-mask::$TOKEN"
           echo "RAG_INTERNAL_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
-      - id: deploy-rag
-        name: Deploy Python RAG lab to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v3
-        with:
-          project_id: claimflow-ai-agents
-          region: australia-southeast1
-          service: claimflow-rag-lab
-          source: services/rag-python
-          env_vars_update_strategy: overwrite
-          env_vars: |-
-            RAG_INTERNAL_TOKEN=${{ env.RAG_INTERNAL_TOKEN }}
-            RAG_MODEL=sentence-transformers/all-MiniLM-L6-v2
-          flags: >-
-            --allow-unauthenticated
-            --service-account=claimflow-api-runtime@claimflow-ai-agents.iam.gserviceaccount.com
-            --min-instances=0
-            --max-instances=1
-            --concurrency=4
-            --memory=2Gi
-            --cpu=1
-            --timeout=120
-            --port=8090
-
-      - name: Verify deployed RAG service
-        env:
-          RAG_URL: ${{ steps.deploy-rag.outputs.url }}
-          RAG_INTERNAL_TOKEN: ${{ env.RAG_INTERNAL_TOKEN }}
-        run: |
-          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$RAG_URL/health"
-          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$RAG_URL/ready"
-          node --input-type=module -e 'const r=await fetch(process.env.RAG_URL+"/retrieve",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+process.env.RAG_INTERNAL_TOKEN},body:JSON.stringify({question:"Have we handled previous claims where rain entered through a damaged roof?",top_k:2})});const b=await r.json();console.log(JSON.stringify(b,null,2));if(!r.ok||b.matches?.[0]?.claim_id!=="1004"||b.matches?.[1]?.claim_id!=="1001")process.exit(1)'
-
       - id: deploy
         name: Build from source and deploy ClaimFlow API
         uses: google-github-actions/deploy-cloudrun@v3
@@ -220,14 +188,14 @@ jobs:
             GOOGLE_CLOUD_LOCATION=australia-southeast1
             FIRESTORE_DATABASE_ID=(default)
             DOCUMENT_BUCKET=claimflow-ai-agents-documents
-            RAG_SERVICE_URL=${{ steps.deploy-rag.outputs.url }}
+            RAG_SERVICE_URL=http://127.0.0.1:8090
             RAG_INTERNAL_TOKEN=${{ env.RAG_INTERNAL_TOKEN }}
           flags: >-
             --service-account=claimflow-api-runtime@claimflow-ai-agents.iam.gserviceaccount.com
             --min-instances=0
             --max-instances=1
             --concurrency=4
-            --memory=1Gi
+            --memory=2Gi
             --cpu=1
             --timeout=120
             --port=8080
