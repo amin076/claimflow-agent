@@ -78,27 +78,6 @@ jobs:
           node --input-type=module -e 'const r=await fetch("http://127.0.0.1:8090/retrieve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:"Have we handled previous claims where rain entered through a damaged roof?",top_k:2})});const b=await r.json();console.log(JSON.stringify(b,null,2));if(!r.ok||b.matches?.[0]?.claim_id!=="1004"||b.matches?.[1]?.claim_id!=="1001")process.exit(1)'
       - name: Verify TypeScript to Python HTTP bridge
         run: npm run rag:smoke -- --retrieval-only
-      - name: Explain live Vertex acceptance identity setup
-        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT == ''
-        run: echo "::notice::Live Vertex RAG acceptance is skipped until GCP_RAG_TEST_SERVICE_ACCOUNT is configured. Run scripts/setup-rag-acceptance-identity.ps1 once with an IAM-admin identity."
-
-      - id: auth
-        name: Authenticate RAG acceptance test to Google Cloud
-        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT != ''
-        uses: google-github-actions/auth@v3
-        with:
-          project_id: claimflow-ai-agents
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_RAG_TEST_SERVICE_ACCOUNT }}
-      - name: Verify live RAG generation with Gemini on Vertex
-        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT != ''
-        env:
-          AI_MODE: vertex
-          GOOGLE_CLOUD_PROJECT: claimflow-ai-agents
-          GOOGLE_CLOUD_LOCATION: australia-southeast1
-          VERTEX_LOCATION: global
-          GEMINI_MODEL: gemini-3.5-flash
-        run: npm run rag:live
       - if: always()
         run: cat /tmp/claimflow-rag.log
 
@@ -155,7 +134,7 @@ jobs:
       vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
       vars.GCP_DEPLOY_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     concurrency:
       group: claimflow-production-deploy
       cancel-in-progress: false
@@ -181,8 +160,47 @@ jobs:
       - name: Snapshot voice secret references and inspect previous draft failures
         run: node scripts/verify-voice-release.mjs before "$RUNNER_TEMP/claimflow-voice-refs.json"
 
+      - name: Generate RAG internal token
+        shell: bash
+        run: |
+          TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$TOKEN"
+          echo "RAG_INTERNAL_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - id: deploy-rag
+        name: Deploy Python RAG lab to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: claimflow-ai-agents
+          region: australia-southeast1
+          service: claimflow-rag-lab
+          source: services/rag-python
+          env_vars_update_strategy: overwrite
+          env_vars: |-
+            RAG_INTERNAL_TOKEN=${{ env.RAG_INTERNAL_TOKEN }}
+            RAG_MODEL=sentence-transformers/all-MiniLM-L6-v2
+          flags: >-
+            --allow-unauthenticated
+            --service-account=claimflow-api-runtime@claimflow-ai-agents.iam.gserviceaccount.com
+            --min-instances=0
+            --max-instances=1
+            --concurrency=4
+            --memory=2Gi
+            --cpu=1
+            --timeout=120
+            --port=8090
+
+      - name: Verify deployed RAG service
+        env:
+          RAG_URL: ${{ steps.deploy-rag.outputs.url }}
+          RAG_INTERNAL_TOKEN: ${{ env.RAG_INTERNAL_TOKEN }}
+        run: |
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$RAG_URL/health"
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 "$RAG_URL/ready"
+          node --input-type=module -e 'const r=await fetch(process.env.RAG_URL+"/retrieve",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+process.env.RAG_INTERNAL_TOKEN},body:JSON.stringify({question:"Have we handled previous claims where rain entered through a damaged roof?",top_k:2})});const b=await r.json();console.log(JSON.stringify(b,null,2));if(!r.ok||b.matches?.[0]?.claim_id!=="1004"||b.matches?.[1]?.claim_id!=="1001")process.exit(1)'
+
       - id: deploy
-        name: Build from source and deploy to Cloud Run
+        name: Build from source and deploy ClaimFlow API
         uses: google-github-actions/deploy-cloudrun@v3
         with:
           project_id: claimflow-ai-agents
@@ -202,6 +220,8 @@ jobs:
             GOOGLE_CLOUD_LOCATION=australia-southeast1
             FIRESTORE_DATABASE_ID=(default)
             DOCUMENT_BUCKET=claimflow-ai-agents-documents
+            RAG_SERVICE_URL=${{ steps.deploy-rag.outputs.url }}
+            RAG_INTERNAL_TOKEN=${{ env.RAG_INTERNAL_TOKEN }}
           flags: >-
             --service-account=claimflow-api-runtime@claimflow-ai-agents.iam.gserviceaccount.com
             --min-instances=0
@@ -220,6 +240,12 @@ jobs:
           curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/ready"
           curl --fail --silent --show-error --retry 8 --retry-delay 3 "$SERVICE_URL/" > /dev/null
           echo "ClaimFlow deployed: $SERVICE_URL"
+
+      - name: Verify deployed RAG plus live Gemini
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+          RAG_INTERNAL_TOKEN: ${{ env.RAG_INTERNAL_TOKEN }}
+        run: node scripts/verify-rag-deployment.mjs
 
       - name: Verify stable URL and preserved voice secret references
         run: node scripts/verify-voice-release.mjs after "$RUNNER_TEMP/claimflow-voice-refs.json"
