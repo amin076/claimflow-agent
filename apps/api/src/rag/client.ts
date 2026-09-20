@@ -25,7 +25,9 @@ export async function retrieveEvidence(input: {
   fetchImpl?: typeof fetch;
 }): Promise<RagRetrieveResponse> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const baseUrl = input.baseUrl.endsWith('/') ? input.baseUrl.slice(0, -1) : input.baseUrl;
+  const baseUrl = input.baseUrl.endsWith('/')
+    ? input.baseUrl.slice(0, -1)
+    : input.baseUrl;
   const response = await fetchImpl(baseUrl + '/retrieve', {
     method: 'POST',
     headers: {
