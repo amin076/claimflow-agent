@@ -5,8 +5,10 @@ import { buildGroundedPrompt, VertexRagGenerator } from './generator.js';
 const args = process.argv.slice(2);
 const retrievalOnly = args.includes('--retrieval-only');
 const question =
-  args.filter((argument) => argument !== '--retrieval-only').join(' ').trim() ||
-  'Have we handled previous claims where rain entered through a damaged roof?';
+  args
+    .filter((argument) => argument !== '--retrieval-only')
+    .join(' ')
+    .trim() || 'Have we handled previous claims where rain entered through a damaged roof?';
 
 const ragServiceUrl = process.env.RAG_SERVICE_URL ?? 'http://127.0.0.1:8090';
 const topK = Number.parseInt(process.env.RAG_TOP_K ?? '2', 10);
