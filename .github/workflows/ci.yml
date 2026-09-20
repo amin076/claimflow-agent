@@ -78,16 +78,20 @@ jobs:
           node --input-type=module -e 'const r=await fetch("http://127.0.0.1:8090/retrieve",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:"Have we handled previous claims where rain entered through a damaged roof?",top_k:2})});const b=await r.json();console.log(JSON.stringify(b,null,2));if(!r.ok||b.matches?.[0]?.claim_id!=="1004"||b.matches?.[1]?.claim_id!=="1001")process.exit(1)'
       - name: Verify TypeScript to Python HTTP bridge
         run: npm run rag:smoke -- --retrieval-only
+      - name: Explain live Vertex acceptance identity setup
+        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT == ''
+        run: echo "::notice::Live Vertex RAG acceptance is skipped until GCP_RAG_TEST_SERVICE_ACCOUNT is configured. Run scripts/setup-rag-acceptance-identity.ps1 once with an IAM-admin identity."
+
       - id: auth
         name: Authenticate RAG acceptance test to Google Cloud
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT != ''
         uses: google-github-actions/auth@v3
         with:
           project_id: claimflow-ai-agents
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_RAG_TEST_SERVICE_ACCOUNT }}
       - name: Verify live RAG generation with Gemini on Vertex
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && vars.GCP_RAG_TEST_SERVICE_ACCOUNT != ''
         env:
           AI_MODE: vertex
           GOOGLE_CLOUD_PROJECT: claimflow-ai-agents
