@@ -27,7 +27,7 @@ Gemini on Vertex AI
 Grounded answer
 ```
 
-The existing Fastify routes, ADK extraction workflow, Firestore/GCS persistence, human-review state machine, production Dockerfile and Cloud Run deployment remain unchanged.
+The existing claim-processing routes, ADK extraction workflow, Firestore/GCS persistence and human-review state machine remain unchanged. Production now runs the Python retriever as a separate localhost process inside the same Cloud Run container as the Node API. This preserves the HTTP/language boundary without requiring broader Cloud Run IAM privileges.
 
 ## Repository additions
 
@@ -158,18 +158,31 @@ python -m pytest services/rag-python/test_rag.py
 
 The Python unit tests inject a fake encoder, so CI does not need to download the Hugging Face model just to validate ranking and the API contract.
 
-## Docker boundary
+## Deployment boundary
 
-The Python lab has its own Dockerfile:
+The Python lab still has its own Dockerfile for local or future independent deployment:
 
 ```powershell
 docker build -t claimflow-rag-lab services/rag-python
 docker run --rm -p 8090:8090 claimflow-rag-lab
 ```
 
-This is intentionally separate from the existing ClaimFlow production image. A future Cloud Run deployment should use a separate service such as `claimflow-rag-lab`, then restrict invocation to the ClaimFlow runtime identity.
+For the current production acceptance path, the main ClaimFlow image also installs the Python runtime and starts FastAPI on `127.0.0.1:8090`. Node talks to that process over HTTP and the external RAG route remains protected by the generated internal bearer token.
 
-The current local SentenceTransformer image is useful for learning but is not yet the production retrieval design. Before production deployment we should evaluate model packaging/cold-start size, managed embeddings, persistent vector storage, metadata filtering, hybrid retrieval, reranking and RAG evaluation.
+```text
+Cloud Run claimflow-api container
+  ├─ Node/Fastify :8080
+  │    └─ /api/lab/rag/query
+  │          ↓
+  └─ Python/FastAPI :8090 (localhost only)
+       └─ SentenceTransformer retrieval
+```
+
+We first attempted a separate private `claimflow-rag-lab` Cloud Run service. The GitHub deployment identity can deploy source services but intentionally cannot change Cloud Run IAM policies, so the new service remained private and could not be invoked by the deployment verifier. Rather than grant the deployer Cloud Run Admin, the production learning path is co-located for now.
+
+A future independent microservice deployment should grant the ClaimFlow runtime identity only the Cloud Run Invoker permission on the RAG service using an IAM-admin bootstrap step.
+
+The current SentenceTransformer corpus is still synthetic and in-memory. Before using RAG in the real claim-processing workflow we should evaluate persistent vector storage, chunking, metadata filters, hybrid retrieval, reranking and retrieval evaluation.
 
 ## Next integration steps
 
@@ -179,8 +192,8 @@ After the lab passes locally:
 2. add chunking and metadata;
 3. introduce a persistent vector store;
 4. evaluate retrieval quality with labelled questions;
-5. deploy the Python service independently;
-6. add an optional lab-only Fastify route after the service boundary is proven;
+5. keep the protected lab route separate from the production claim-processing workflow;
+6. split Python back into an independently authenticated Cloud Run microservice after its service-to-service IAM bootstrap is available;
 7. only then consider RAG as an ADK tool in the real claim workflow.
 
 This sequencing keeps the evidence-first production path stable while the RAG design is still being learned and evaluated.
