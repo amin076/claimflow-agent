@@ -44,7 +44,9 @@ describe('RAG lab', () => {
     const prompt = buildGroundedPrompt('What was the repair cost?', matches);
 
     expect(prompt).toContain('claimId=1004');
-    expect(prompt).toContain('Do not invent claim facts, costs, dates, decisions, or policy wording.');
+    expect(prompt).toContain(
+      'Do not invent claim facts, costs, dates, decisions, or policy wording.',
+    );
     expect(prompt).toContain('There is not enough evidence to answer the question.');
   });
 });
