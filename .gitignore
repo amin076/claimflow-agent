@@ -1,6 +1,15 @@
 # Dependencies
 node_modules/
 
+# Python environments and caches
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+*.py[cod]
+
 # Build output
 dist/
 coverage/
